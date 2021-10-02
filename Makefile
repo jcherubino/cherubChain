@@ -1,22 +1,22 @@
 CC = gcc
-CFLAGS = -Wall
-
-BUILD_DIR = ./build
-INC_DIR = ./include
-SRC_DIR = ./src
+CFLAGS = -Wall -Iinclude/
 
 PROG = cherub_chain
 
 .PHONY: clean default
 
-default: $(PROG)
+default: cherub_chain
 
-prog.o: src/cherub_chain.c include/cherub_chain.h
+cherub_chain: cherub_chain.o block.o
+	$(CC) $(CFLAGS) build/cherub_chain.o build/block.o -o cherub_chain 
+
+cherub_chain.o: src/cherub_chain.c include/block.h
 	mkdir -p build
-	$(CC) $(CFLAGS) -c src/cherub_chain.c -o build/prog.o
+	$(CC) $(CFLAGS) -c src/cherub_chain.c -o build/cherub_chain.o
 
-cherub_chain: prog.o
-	$(CC) $(CFLAGS) build/prog.o -o cherub_chain 
+block.o: src/block.c include/block.h
+	mkdir -p build
+	$(CC) $(CFLAGS) -c src/block.c -o build/block.o
 
 clean:
 	rm -rf build
