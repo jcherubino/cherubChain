@@ -3,10 +3,10 @@ Mini implementation of simple blockchain written in pure C for *nix systems (pro
 
 ## Roadmap
 
-- [ ] Implement chain structure as linked list (store some arbitrary transaction as string)
-- [ ] Implement hash function
-- [ ] Implement dynamically adding node
-- [ ] Implement printing out list locally
+- [X] Implement chain structure as linked list (store some arbitrary transaction as string)
+- [X] Implement hash function
+- [X] Implement dynamically adding node
+- [X] Implement printing out list locally
 - [ ] Implement HTTP server to perform actions with node. Use json format or xml format
     - [ ] Get chain
     - [ ] Add transaction
@@ -14,3 +14,5 @@ Mini implementation of simple blockchain written in pure C for *nix systems (pro
 - [ ] Implement peer to peer network to allow nodes to interface
 - [ ] Implement consensus algorithm
 - [ ] Add proof of ... for blocks to be mined
+- [ ] Upgrade internal hashing to use cryptographic hash function
+
