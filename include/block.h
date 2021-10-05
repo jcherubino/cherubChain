@@ -2,7 +2,6 @@
 #define _BLOCK_H
 #include <stdint.h>
 
-#define BLOCK_TRANSACTIONS 10U /*Number of transactions each block stores*/
 #define MAX_PAYLOAD 20U /*Max length of transaction*/
 
 struct Block {
@@ -20,7 +19,9 @@ struct Link {
 /*Operations on chain*/
 void print_chain(const struct Link* head);
 struct Link* append_link(struct Link* tail);
-void delete_chain(struct Link** head_p);
+void delete_chain(struct Link** phead);
 
-void add_payload(struct Block* block_p, const char* payload);
+/*Operations on block*/
+void add_payload(struct Block* pblock, const char* payload);
+void hash_block(struct Block* pblock);
 #endif //_BLOCK_H
