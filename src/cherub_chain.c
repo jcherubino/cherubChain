@@ -4,9 +4,9 @@
 
 int main() {
     
-    struct Link* head = append_link(NULL);
+    struct Link* head = initialise_chain();
     char payload_buf[MAX_PAYLOAD];
-    add_payload(&head->block, "Genisis block");
+    add_payload(&head->block, "Genesis block choo choo all aboard the cherub chrain");
     hash_block(&head->block);
         
     int i; struct Link* plink;

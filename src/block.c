@@ -19,24 +19,27 @@ void print_chain(const struct Link* head) {
     }
 }
 
+//Initialise new linked list
+//Returns NULL ptr on failure
+struct Link* initialise_chain(void) {
+    struct Link * plink = (struct Link*) malloc(sizeof(struct Link));
+    if (plink == NULL) return NULL;
+
+    plink->next = NULL;
+    return plink;
+}
+
 //Add a new link to the end of the chain and return a pointer to it
-//If head is NULL will start new chain
 //Returns NULL ptr if fail
 struct Link* append_link(struct Link* head) {
+    if (head == NULL) return NULL;
+
     struct Link* plink = (struct Link*) malloc(sizeof(struct Link));
-    //Fail - leave error handling to caller
+    //Leave error handling to caller
     if (plink == NULL) return NULL;
 
     plink->next = NULL;
 
-    //connect to end of chain
-    if (head == NULL) {
-        //no chain exists - plink is head
-        //In this case we have genesis block
-        plink->block.prev_hash = 0;
-        return plink;
-    }
-    
     //walk chain
     struct Link* tail;
     for (tail = head; tail->next != NULL; tail = tail->next);

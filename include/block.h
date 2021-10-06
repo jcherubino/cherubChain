@@ -2,7 +2,7 @@
 #define _BLOCK_H
 #include <stdint.h>
 
-#define MAX_PAYLOAD 20U /*Max length of transaction*/
+#define MAX_PAYLOAD 100U /*Max length of transaction*/
 
 struct Block {
     uint32_t prev_hash; /*hash of last block. 0 for gen*/
@@ -18,6 +18,7 @@ struct Link {
 
 /*Operations on chain*/
 void print_chain(const struct Link* head);
+struct Link* initialise_chain(void);
 struct Link* append_link(struct Link* tail);
 void delete_chain(struct Link** phead);
 
