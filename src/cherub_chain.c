@@ -1,9 +1,10 @@
 #include <stdio.h>
-#include "block.h"
 #include <string.h>
+#include "block.h"
+#include "server.h"
 
 int main() {
-    
+    /*
     struct Link* head = initialise_chain();
     char payload_buf[MAX_PAYLOAD];
     add_payload(&head->block, "Genesis block choo choo all aboard the cherub chrain");
@@ -23,6 +24,22 @@ int main() {
 
     print_chain(head);
     delete_chain(&head);
+    */
+
+    int listenerfd = get_listener();
+    if (listenerfd == -1) {
+        fprintf(stderr, "Failed to get listener\n");
+        return 1;
+    }
+    printf("Got listener %d\n", listenerfd);
+    int clientfd = get_client(listenerfd);
+    if (clientfd == -1) {
+        fprintf(stderr, "Failed to get listener\n");
+        return 1;
+    }
+    printf("Got client %d\n", listenerfd);
+    close(listenerfd);
+    close(clientfd);
     return 0;
 }
 
