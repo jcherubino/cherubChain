@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include "server.h"
@@ -76,8 +75,8 @@ int get_listener(void) {
 //Takes open sockfd to 'accept' with
 int get_client(const int listenfd) {
     struct sockaddr_storage their_addr; // connector's address information
-    socklen_t sin_size; 
-    sin_size = sizeof(their_addr);
+    socklen_t sin_size = sizeof(their_addr);
+
     int new_fd = accept(listenfd, (struct sockaddr *)&their_addr, &sin_size);
 
     if (new_fd == -1) {

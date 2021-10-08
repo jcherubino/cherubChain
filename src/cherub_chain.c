@@ -34,10 +34,27 @@ int main() {
     printf("Got listener %d\n", listenerfd);
     int clientfd = get_client(listenerfd);
     if (clientfd == -1) {
-        fprintf(stderr, "Failed to get listener\n");
+        fprintf(stderr, "Failed to get client\n");
         return 1;
     }
     printf("Got client %d\n", listenerfd);
+
+    //Receive 1 byte from client. Set flags to 0
+    uint8_t data; int nbytes;
+    if ((nbytes = recv(clientfd, &data, 1, 0)) == -1) {
+        perror("recv");
+        return 1;
+    }
+    
+    printf("Received byte: %d\n", data);
+
+    data = 133;
+    if ((nbytes = send(clientfd, &data, 1, 0)) == -1) {
+        perror("send");
+        return 1;
+    }
+
+    //close sockfds
     close(listenerfd);
     close(clientfd);
     return 0;
