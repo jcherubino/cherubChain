@@ -7,7 +7,7 @@ Mini implementation of simple blockchain written in pure C for *nix systems (pro
 - [X] Implement hash function
 - [X] Implement dynamically adding node
 - [X] Implement printing out list locally
-- [ ] Implement HTTP server to perform actions with node. Use json format or xml format
+- [ ] Implement client/server socket interface to perform actions with node. 
     - [ ] Get chain
     - [ ] Add transaction
     - [ ] Add node
