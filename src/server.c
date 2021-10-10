@@ -88,3 +88,19 @@ int get_client(const int listenfd) {
     return new_fd;
 }
 
+
+//send buffer to given connected sockfd
+//return -1 on failure otherwise return number of bytes written
+int32_t send_buf(int sockfd, uint8_t * buf, size_t len) {
+    size_t sent = 0;
+    int n; 
+    while (sent < len) {
+        n = send(sockfd, buf+sent, len-sent, 0); 
+        if (n == -1) break;
+        sent += n;
+    }
+
+    //-1 on failure otherwise number sent
+    return n == -1 ? -1: sent;
+}
+

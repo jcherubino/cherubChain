@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "block.h"
 #include "server.h"
 
 int main() {
-    /*
     struct Link* head = initialise_chain();
     char payload_buf[MAX_PAYLOAD];
     add_payload(&head->block, "Genesis block choo choo all aboard the cherub chrain");
@@ -22,9 +22,7 @@ int main() {
     add_payload(&plink->block, "End of the chain :)"); 
     hash_block(&plink->block);
 
-    print_chain(head);
-    delete_chain(&head);
-    */
+    //print_chain(head);
 
     int listenerfd = get_listener();
     if (listenerfd == -1) {
@@ -32,6 +30,7 @@ int main() {
         return 1;
     }
     printf("Got listener %d\n", listenerfd);
+
     int clientfd = get_client(listenerfd);
     if (clientfd == -1) {
         fprintf(stderr, "Failed to get client\n");
@@ -39,24 +38,26 @@ int main() {
     }
     printf("Got client %d\n", listenerfd);
 
-    //Receive 1 byte from client. Set flags to 0
-    uint8_t data; int nbytes;
-    if ((nbytes = recv(clientfd, &data, 1, 0)) == -1) {
-        perror("recv");
-        return 1;
-    }
-    
-    printf("Received byte: %d\n", data);
+    //Send block buffer
+    struct BlockBuf bbuf = get_block_buf(head->next->next->block);
 
-    data = 133;
-    if ((nbytes = send(clientfd, &data, 1, 0)) == -1) {
+    size_t nbytes;
+    if ((nbytes = send_buf(clientfd, bbuf.buf, bbuf.len)) == -1) {
         perror("send");
         return 1;
     }
 
+    print_block(head->next->next->block);
+    //free block buffer buffer 
+    free(bbuf.buf);
+
     //close sockfds
     close(listenerfd);
     close(clientfd);
+
+    //free entire chain
+    free_chain(&head);
+
     return 0;
 }
 
