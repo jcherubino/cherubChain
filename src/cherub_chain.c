@@ -39,7 +39,7 @@ int main() {
     printf("Got client %d\n", listenerfd);
 
     //Send block buffer
-    struct BlockBuf bbuf = get_block_buf(head->next->next->block);
+    struct BlockBuf bbuf = pack_block(head->next->next->next->block);
 
     size_t nbytes;
     if ((nbytes = send_buf(clientfd, bbuf.buf, bbuf.len)) == -1) {
@@ -47,7 +47,7 @@ int main() {
         return 1;
     }
 
-    print_block(head->next->next->block);
+    print_block(head->next->next->next->block);
     //free block buffer buffer 
     free(bbuf.buf);
 

@@ -84,14 +84,15 @@ void add_payload(struct Block* pblock, const char* payload) {
 }
 
 //Create block buffer to transfer via socket
-//return internal buf must be freed after use. 
+//internal buf must be freed after use. 
 //Return NULL pointer in buf member if fail to allocate buf.
 //Manually pack to avoid platform dependant alignment/pack bytes in Block struct.
-struct BlockBuf get_block_buf(const struct Block block) {
-    uint32_t block_sz;
+struct BlockBuf pack_block(const struct Block block) {
+    size_t block_sz;
     uint16_t payload_sz = strlen(block.payload);
-    //must also make space to send length of block and length of payload specifiers which may var
-    block_sz = 3*sizeof(uint32_t) + sizeof(uint16_t) + payload_sz;
+    //must send length length of payload which will vary between blocks.
+    //payload length, Prev hash, hash, payload
+    block_sz = sizeof(uint16_t) + 2*sizeof(uint32_t) + payload_sz;
 
     struct BlockBuf block_buf;
     block_buf.buf = malloc(block_sz);
@@ -106,18 +107,13 @@ struct BlockBuf get_block_buf(const struct Block block) {
     //get network ordered data
     uint32_t net_prev_hash = htonl(block.prev_hash);
     uint32_t net_hash = htonl(block.hash);
-
-    //subtract 4 because receiver will always read initial 4 bytes to 
-    //get buffer size
-    uint32_t net_block_sz = htonl(block_sz - 4);
     uint16_t net_payload_sz = htons(payload_sz);
 
     //pack data into buf
     uint8_t *cur = block_buf.buf;
-    memcpy(cur, &net_block_sz, sizeof(uint32_t)); cur+= sizeof(uint32_t);
+    memcpy(cur, &net_payload_sz, sizeof(uint16_t)); cur+= sizeof(uint16_t); 
     memcpy(cur, &net_prev_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
     memcpy(cur, &net_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
-    memcpy(cur, &net_payload_sz, sizeof(uint16_t)); cur+= sizeof(uint16_t); 
     memcpy(cur, block.payload, payload_sz);
     
     return block_buf;
