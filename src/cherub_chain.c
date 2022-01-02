@@ -3,6 +3,16 @@
 #include <stdlib.h>
 #include "block.h"
 #include "server.h"
+#include <signal.h>
+
+//Setup signal handler to gracefully exit
+static volatile sig_atomic_t prog_run_status = 1;
+
+void sig_int_handler(int _) {
+    (void)_;
+    printf("\r"); //carriage return to remove ^C from output terminal
+    prog_run_status = 0;    
+}
 
 int main() {
     struct Link* head = initialise_chain();
@@ -22,40 +32,22 @@ int main() {
     add_payload(&plink->block, "End of the chain :)"); 
     hash_block(&plink->block);
 
-    //print_chain(head);
+    print_chain(head);
 
-    int listenerfd = get_listener();
-    if (listenerfd == -1) {
-        fprintf(stderr, "Failed to get listener\n");
-        return 1;
-    }
-    printf("Got listener %d\n", listenerfd);
+    struct PollingData* polling_data = initialise_server();
 
-    int clientfd = get_client(listenerfd);
-    if (clientfd == -1) {
-        fprintf(stderr, "Failed to get client\n");
-        return 1;
-    }
-    printf("Got client %d\n", listenerfd);
+    //Setup sigint handling
+    struct sigaction act;
+    act.sa_handler = sig_int_handler;
+    sigaction(SIGINT, &act, NULL);
 
-    //Send block buffer
-    struct BlockBuf bbuf = pack_block(head->next->next->next->block);
+    printf("Initialisation complete, entering node loop\n"); 
+    //main processing loop
+    while(prog_run_status);
+    
+    printf("Shutdown signal received -- stopping node\n"); 
+    deinitialise_server(&polling_data);
 
-    size_t nbytes;
-    if ((nbytes = send_buf(clientfd, bbuf.buf, bbuf.len)) == -1) {
-        perror("send");
-        return 1;
-    }
-
-    print_block(head->next->next->next->block);
-    //free block buffer buffer 
-    free(bbuf.buf);
-
-    //close sockfds
-    close(listenerfd);
-    close(clientfd);
-
-    //free entire chain
     free_chain(&head);
 
     return 0;

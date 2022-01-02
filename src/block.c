@@ -14,6 +14,7 @@ void print_chain(const struct Link* head) {
     //walk chain
     for (const struct Link* link = head; link != NULL; link = link->next) {
         printf(BLOCK_DIV);
+        print_block(link->block);
     }
 }
 
@@ -50,7 +51,7 @@ struct Link* append_link(struct Link* head) {
     return plink;
 }
 
-//Free memory for chain, starting at end 
+//Free memory for chain
 void free_chain(struct Link** phead) {
     struct Link* current = *phead;
     struct Link* next;
