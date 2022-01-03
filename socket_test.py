@@ -5,6 +5,8 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 s.connect(("localhost", 33333))
 
+#Temp, send a single byte to request read of data
+s.send(b'x')
 #get first 2 bytes as payload len. network = big byte order
 recvd = s.recv(2)
 

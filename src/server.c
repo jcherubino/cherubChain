@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 #include "server.h"
 #include <stdlib.h>
 
@@ -14,6 +15,7 @@
 
 //Internal functions
 static int get_listener(void);
+void *get_in_addr(struct sockaddr *sa);
 
 //Create server data struct instance with appropraite set up and information 
 //to begin communicating data via sockets. Returns null pointer on failure
@@ -74,10 +76,46 @@ int add_fd_to_server(struct PollingData* polling_data, int new_fd) {
 }
 
 //Remove index from the set
-//N.B. the sockfd should be closed before calling this function
 void delete_fd_from_server(struct PollingData* polling_data, int fd_index) {
+    close(polling_data->pollfds[fd_index].fd); //close sockfd
     //Copy end over sockfd to delete with last entry while also updating count
     polling_data->pollfds[fd_index] = polling_data->pollfds[--polling_data->fd_count];
+}
+
+//get client sockfd to communicate on.
+//Takes open sockfd to 'accept' with
+int get_client(const int listenfd) {
+    struct sockaddr_storage their_addr; // connector's address information
+    socklen_t sin_size = sizeof(their_addr);
+
+    int new_fd = accept(listenfd, (struct sockaddr *)&their_addr, &sin_size);
+
+    if (new_fd == -1) {
+        perror("accept");
+        close(new_fd);
+        return -1;
+    }
+        
+    //report client information
+    
+    char remote_ip[INET6_ADDRSTRLEN];
+
+    printf("Server: new connection from %s on socket %d\n",
+            inet_ntop(their_addr.ss_family,
+                get_in_addr((struct sockaddr*)&their_addr), remote_ip, INET6_ADDRSTRLEN),
+                            new_fd);
+    return new_fd;
+}
+
+
+// get sockaddr, IPv4 or IPv6:
+void *get_in_addr(struct sockaddr *sa)
+{
+	if (sa->sa_family == AF_INET) {
+		return &(((struct sockaddr_in*)sa)->sin_addr);
+	}
+
+	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 //Get 'listening' sockfd 
