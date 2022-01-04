@@ -34,7 +34,7 @@ int main() {
 
     print_chain(head);
 
-    struct PollingData* polling_data = initialise_server();
+    struct ServerData* server_data = initialise_server();
 
     //Setup sigint handling
     struct sigaction act;
@@ -44,32 +44,32 @@ int main() {
     printf("Initialisation complete, entering node loop\n"); 
     //main processing loop
     while(prog_run_status) {
-        int poll_count = poll(polling_data->pollfds, polling_data->fd_count, -1);
+        int poll_count = poll(server_data->pollfds, server_data->fd_count, 1);
 
         if (poll_count == -1) {
             perror("poll");
         }
 
         // Run through the existing connections looking for data to read
-        for(int i = 0; i < polling_data->fd_count; i++) {
+        for(int i = 0; i < server_data->fd_count; i++) {
 
             // Check if someone's ready to read
-            if (polling_data->pollfds[i].revents & POLLIN) { 
+            if (server_data->pollfds[i].revents & POLLIN) { 
 
-                if (polling_data->pollfds[i].fd == polling_data->listenerfd) {
+                if (server_data->pollfds[i].fd == server_data->listenerfd) {
                     // If listener is ready to read, handle new connection
 
-                    int new_fd = get_client(polling_data->listenerfd);
+                    int new_fd = get_client(server_data->listenerfd);
 
                     if (new_fd != -1) {
-                        add_fd_to_server(polling_data, new_fd);
+                        add_fd_to_server(server_data, new_fd);
                     }
                 } else {
                     // If we have received POLLIN revent from socket that is not the listener,
                     //we must handle receiving the data
                     uint8_t buf[1];
                     //For now, just read a single byte and do nothing with it.
-                    int sender_fd = polling_data->pollfds[i].fd;
+                    int sender_fd = server_data->pollfds[i].fd;
                     size_t nbytes = recv(sender_fd, buf, 1, 0);
 
 
@@ -83,7 +83,7 @@ int main() {
                         }
                         
                         //close and remove closed fd from polling data 
-                        delete_fd_from_server(polling_data, i);
+                        delete_fd_from_server(server_data, i);
 
                     } else {
                         //Received from socket successfully - respond approrpriately
@@ -105,7 +105,7 @@ int main() {
     
     printf("Shutdown signal received -- stopping node\n"); 
 
-    deinitialise_server(&polling_data);
+    deinitialise_server(&server_data);
     free_chain(&head);
 
     return 0;

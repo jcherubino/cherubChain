@@ -19,67 +19,67 @@ void *get_in_addr(struct sockaddr *sa);
 
 //Create server data struct instance with appropraite set up and information 
 //to begin communicating data via sockets. Returns null pointer on failure
-struct PollingData *initialise_server(void) {
-    struct PollingData * polling_data = malloc(sizeof(struct PollingData));
+struct ServerData *initialise_server(void) {
+    struct ServerData * server_data = malloc(sizeof(struct ServerData));
 
     //TODO: dynamically allocate instead of wasting space with MAX_CONN_NUMBER?
-    polling_data->pollfds = malloc(sizeof(struct pollfd) * TOTAL_CONNS);
+    server_data->pollfds = malloc(sizeof(struct pollfd) * TOTAL_CONNS);
 
-    if (polling_data == NULL) {
-        fprintf(stderr, "Failed to malloc memory for PollingData struct\n");
+    if (server_data == NULL) {
+        fprintf(stderr, "Failed to malloc memory for ServerData struct\n");
         return NULL;
     }
 
     // Set up and get a listening socket
-    polling_data->listenerfd = get_listener();
+    server_data->listenerfd = get_listener();
 
     //return NULL ptr to indicate error
-    if (polling_data->listenerfd == -1) {
+    if (server_data->listenerfd == -1) {
         fprintf(stderr, "error getting listening socket\n");
-        free(polling_data->pollfds);
-        free(polling_data);
+        free(server_data->pollfds);
+        free(server_data);
         return NULL;
     }
     
     // Add the listener to the array
-    polling_data->fd_count = 1; 
-    polling_data->pollfds[0].fd = polling_data->listenerfd;
-    polling_data->pollfds[0].events = POLLIN; // Report ready to read on incoming connection
+    server_data->fd_count = 1; 
+    server_data->pollfds[0].fd = server_data->listenerfd;
+    server_data->pollfds[0].events = POLLIN; // Report ready to read on incoming connection
 
-    return polling_data;
+    return server_data;
 }
 
-void deinitialise_server(struct PollingData ** polling_data) {
+void deinitialise_server(struct ServerData ** server_data) {
     //close all sockets
-    for (int i = 0; i < (*polling_data)->fd_count; i++) {
-        close((*polling_data)->pollfds[i].fd);
+    for (int i = 0; i < (*server_data)->fd_count; i++) {
+        close((*server_data)->pollfds[i].fd);
     }
 
-    free((*polling_data)->pollfds);
-    free(*polling_data);
-    *polling_data = NULL;
+    free((*server_data)->pollfds);
+    free(*server_data);
+    *server_data = NULL;
 }
 
 //Attempt to add to server.
-int add_fd_to_server(struct PollingData* polling_data, int new_fd) {
+int add_fd_to_server(struct ServerData* server_data, int new_fd) {
     //N.B. +1 to account for listener
-    if (polling_data->fd_count == TOTAL_CONNS) {
+    if (server_data->fd_count == TOTAL_CONNS) {
         fprintf(stderr, "Max connections in server reached\n");
         return -1;
     }
     
-    polling_data->pollfds[polling_data->fd_count].fd = new_fd;
-    polling_data->pollfds[polling_data->fd_count].events = POLLIN; //ready to read
-    polling_data->fd_count++; 
+    server_data->pollfds[server_data->fd_count].fd = new_fd;
+    server_data->pollfds[server_data->fd_count].events = POLLIN; //ready to read
+    server_data->fd_count++; 
 
     return 0;
 }
 
 //Remove index from the set
-void delete_fd_from_server(struct PollingData* polling_data, int fd_index) {
-    close(polling_data->pollfds[fd_index].fd); //close sockfd
+void delete_fd_from_server(struct ServerData* server_data, int fd_index) {
+    close(server_data->pollfds[fd_index].fd); //close sockfd
     //Copy end over sockfd to delete with last entry while also updating count
-    polling_data->pollfds[fd_index] = polling_data->pollfds[--polling_data->fd_count];
+    server_data->pollfds[fd_index] = server_data->pollfds[--server_data->fd_count];
 }
 
 //get client sockfd to communicate on.
