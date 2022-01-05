@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
+
+#include "endpoints.h"
 #include "block.h"
 #include "server.h"
-#include <signal.h>
 
 //Setup signal handler to gracefully exit
 static volatile sig_atomic_t prog_run_status = 1;
@@ -67,11 +69,10 @@ int main() {
                 } else {
                     // If we have received POLLIN revent from socket that is not the listener,
                     //we must handle receiving the data
-                    uint8_t buf[1];
-                    //For now, just read a single byte and do nothing with it.
+                    uint8_t endpoint_id;
+                    //Read endpoint id to determine appropriate endpoint to run
                     int sender_fd = server_data->pollfds[i].fd;
-                    size_t nbytes = recv(sender_fd, buf, 1, 0);
-
+                    size_t nbytes = recv(sender_fd, &endpoint_id, 1, 0);
 
                     if (nbytes <= 0) {
                         // Got error or connection closed by client
@@ -86,17 +87,12 @@ int main() {
                         delete_fd_from_server(server_data, i);
 
                     } else {
-                        //Received from socket successfully - respond approrpriately
-                        //TODO: Handle how dispatch table will work and order of data
-                       
-                        //Temporary send back single block
-                        struct BlockBuf bbuf = pack_block(head->block);
-                        
-                        if ((nbytes = send_buf(sender_fd, bbuf.buf, bbuf.len)) == -1) {
-                                perror("send");
+                        //Try to dispatch to the requested endpoint
+                        if (endpoint_dispatch(endpoint_id, sender_fd, head) != DISPATCH_OK) {
+                            //If we do not receive OK response then drop the connection
+                            fprintf(stderr, "Dropping connection: %d\n", sender_fd);
+                            delete_fd_from_server(server_data, i); 
                         }
-                        //once done transmitting, free buffer
-                        free(bbuf.buf);
                     }
                 } // END handle data from client
             } // END got ready-to-read from poll()

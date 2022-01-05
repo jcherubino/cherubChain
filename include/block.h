@@ -31,6 +31,6 @@ void free_chain(struct Link** phead);
 /*Operations on block*/
 void print_block(const struct Block block);
 void add_payload(struct Block* pblock, const char* payload);
-struct BlockBuf pack_block(const struct Block block);
+void pack_block(const struct Block block, struct BlockBuf *pblock_buf);
 void hash_block(struct Block* pblock);
 #endif //_BLOCK_H
