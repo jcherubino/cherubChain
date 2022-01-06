@@ -12,6 +12,6 @@ enum endpoint_dispatch_retval {
 };
 
 enum endpoint_dispatch_retval endpoint_dispatch(unsigned int endpoint_id,
-        int sockfd, struct Link * head);
+        int sockfd, struct BlockChain * pblock_chain);
 
 #endif /*_ENDPOINTS_H*/

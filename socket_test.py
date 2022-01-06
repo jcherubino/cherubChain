@@ -5,22 +5,29 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 s.connect(("localhost", 33333))
 
-#Temp, send a single byte to request read of data
+#send a single byte 0 to request chain
 s.send(bytearray([0]))
-#get first 2 bytes as payload len. network = big byte order
-recvd = s.recv(2)
 
-#specify big endian at same time to reverse byte order to native.
-payload_len = int.from_bytes(recvd, byteorder="big", signed=False)
-print(f"Payload length: {payload_len}")
+#Get chain length
+recvd = s.recv(4)
+chain_len = int.from_bytes(recvd, byteorder="big", signed=False)
 
-#+8 for prev hash and hash
-recvd = s.recv(payload_len+8)
+print(chain_len)
+for i in range(chain_len):
+    #get first 2 bytes as payload len. network = big byte order
+    recvd = s.recv(2)
 
-prev_hash = int.from_bytes(recvd[:4], byteorder='big')
-print(f"Prev hash: {prev_hash}")
+    #specify big endian at same time to reverse byte order to native.
+    payload_len = int.from_bytes(recvd, byteorder="big", signed=False)
+    print(f"Payload length: {payload_len}")
 
-cur_hash = int.from_bytes(recvd[4:8], byteorder='big')
-print(f"Hash: {cur_hash}")
+    #+8 for prev hash and hash
+    recvd = s.recv(payload_len+8)
 
-print(recvd[8:])
+    prev_hash = int.from_bytes(recvd[:4], byteorder='big')
+    print(f"Prev hash: {prev_hash}")
+
+    cur_hash = int.from_bytes(recvd[4:8], byteorder='big')
+    print(f"Hash: {cur_hash}")
+
+    print(recvd[8:])

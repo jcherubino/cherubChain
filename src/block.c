@@ -9,79 +9,147 @@
 //Internal functions
 static uint32_t hash_djb2(unsigned char *payload);
 
-//Print entire chain from head until the end of the chain
-void print_chain(const struct Link* head) {
+/**
+ * Print representation of chain to stdout.
+ * @param pblock_chain block chain struct containing chain to print
+ * @return void
+ */
+void print_chain(const struct BlockChain * pblock_chain) {
     //walk chain
-    for (const struct Link* link = head; link != NULL; link = link->next) {
+    for (const struct Link* link = pblock_chain->head; link != NULL; link = link->next) {
         printf(BLOCK_DIV);
         print_block(link->block);
     }
 }
 
-//Initialise new linked list
-//Returns NULL ptr on failure
-struct Link* initialise_chain(void) {
-    struct Link * plink = malloc(sizeof(struct Link));
-    if (plink == NULL) return NULL;
-
-    plink->next = NULL;
-    return plink;
+/**
+ * Initialise block chain struct. 
+ * @param void
+ * @return populated block chain instance
+ */
+struct BlockChain initialise_chain(void) {
+    struct BlockChain block_chain;
+    block_chain.head = block_chain.tail = NULL; //no elements in chain yet
+    block_chain.len = 0;
+    return block_chain;
 }
 
-//Add a new link to the end of the chain and return a pointer to it
-//Returns NULL ptr if fail
-struct Link* append_link(struct Link* head) {
-    if (head == NULL) return NULL;
-
+/**
+ * Add a new link to the end of the chain. 
+ * @param pblock_chain pointer to the block chain to append a link to
+ * @return pointer to newly added link in chain. NULL ptr on failure
+ */
+struct Link* append_link(struct BlockChain* pblock_chain) {
+    //Our chain is really really big :O
+    if (pblock_chain->len == UINT32_MAX) {
+        fprintf(stderr, "Block: Max chain length reached");
+        return NULL;
+    }
     struct Link* plink = malloc(sizeof(struct Link));
     //Leave error handling to caller
-    if (plink == NULL) return NULL;
+    if (plink == NULL)  {
+        fprintf(stderr, "Block: Failed to allocate memory for link");
+        return NULL;
+    }
+
+    //empty block chain. Set up genesis block
+    if (pblock_chain->tail == NULL) {
+        pblock_chain->head = pblock_chain->tail = plink; //single elem so head and tail equal
+        plink->prev = NULL; //no previous blocks to point to
+        plink->block.prev_hash = 0; //no previous hash exists
+    }
+    else {
+        plink->prev = pblock_chain->tail;
+        //link hash
+        plink->block.prev_hash = pblock_chain->tail->block.hash;
+        pblock_chain->tail->next = plink;
+        //advance tail
+        pblock_chain->tail = plink; 
+    }
 
     plink->next = NULL;
-
-    //walk chain
-    struct Link* tail;
-    for (tail = head; tail->next != NULL; tail = tail->next);
-
-    //connect in chain
-    tail->next = plink;
-    //link hash
-    plink->block.prev_hash = tail->block.hash;
+    pblock_chain->len++; //increase size
 
     return plink;
 }
 
-//Free memory for chain
-void free_chain(struct Link** phead) {
-    struct Link* current = *phead;
-    struct Link* next;
+
+/**
+ * Free allocated memory for given block chain.
+ * @param pblock_chain Chain to free
+ * @return void
+ */
+void deinitialise_chain(struct BlockChain * pblock_chain) {
+    struct Link *current, *next;
+    current = pblock_chain->head;
     while (current != NULL) {
         next = current->next;
         free(current->block.payload); //free payload memory
         free(current); //free remainder of block
         current = next;
     }
-    //Set head to NULL
-    *phead = NULL;
+
+    //show chain as being empty
+    pblock_chain->head = pblock_chain->tail = NULL;
+    pblock_chain->len = 0;
+}
+
+/**
+ * Add block to blockchain. Helper function to encapsulate required steps
+ * @param pblock_chain block chain to append to
+ * @param payload payload of new block
+ * @return 0 on success, -1 otherwise
+ */
+int add_block(struct BlockChain * pblock_chain, const char * payload) {
+
+    struct Link * plink = append_link(pblock_chain);
+    if (plink == NULL) {
+        //Failed to append link
+        return -1;
+    }
+    
+    if (add_payload(&plink->block, payload) != 0) {
+        //failed to add payload
+        return -1;
+    }
+    
+    hash_block(&plink->block);
+    return 0;
 }
 
 //print single block to stdout
+/**
+ * Print single block to stdou
+ * @param block block to print
+ * @return void
+ */
 void print_block(const struct Block block) {
     printf("Previous block hash: %u\nHash: %u\nPayload: %s\n", block.prev_hash,
             block.hash, block.payload);
 }
 
-//set blocks payload to null terminated payload string
-void add_payload(struct Block* pblock, const char* payload) {
+/**
+ * Set block payload to null terminated string. Allocates and copies memory
+ * @param pblock Block to add payload to
+ * @param payload string to copy into payload
+ * @return 0 on success, -1 otherwise
+ */
+int add_payload(struct Block* pblock, const char* payload) {
     //+1 for null char
     size_t payload_sz = strlen(payload) + 1;
     payload_sz = (payload_sz > (MAX_PAYLOAD + 1)) ? MAX_PAYLOAD + 1: payload_sz;
 
     pblock->payload = malloc(payload_sz);
+
+    if (pblock->payload == NULL) {
+        fprintf(stderr, "Block: failed to allocate memory for payload");
+        return -1;
+    }
     memcpy(pblock->payload, payload, payload_sz);
     
     //ensure null termination
     *(pblock->payload + payload_sz - 1) = '\0';
+    return 0;
 }
 
 /**
