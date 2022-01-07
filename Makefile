@@ -10,7 +10,14 @@ default: cherub_chain
 cherub_chain: cherub_chain.o block.o server.o
 	$(CC) $(CFLAGS) build/cherub_chain.o build/block.o build/server.o -o cherub_chain 
 
-cherub_chain.o: src/cherub_chain.c include/block.h
+client: client.o block.o server.o
+	$(CC) $(CFLAGS) build/client.o build/block.o build/server.o -o client
+
+client.o: src/client.c
+	mkdir -p build
+	$(CC) $(CFLAGS) -c src/client.c -o build/client.o
+
+cherub_chain.o: src/cherub_chain.c 
 	mkdir -p build
 	$(CC) $(CFLAGS) -c src/cherub_chain.c -o build/cherub_chain.o
 
@@ -25,3 +32,4 @@ server.o: src/server.c include/server.h
 clean:
 	rm -rf build
 	rm ./cherub_chain
+	rm ./client
