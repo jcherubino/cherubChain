@@ -24,12 +24,6 @@ struct BlockChain {
     struct Link * tail; /*Tail of chain to speed up additions to chain*/
 };
 
-/*Struct to store a packed block buffer*/
-struct BlockBuf {
-    uint8_t* buf; /*pointer to allocated buffer*/
-    size_t len; /*Length of buf*/
-};
-
 /*Operations on chain*/
 //TODO: Make unneeded external functions internal only to allow creation of block
 //only via add_block interface
@@ -42,6 +36,6 @@ int add_block(struct BlockChain * pblock_chain, const char * payload);
 /*Operations on block*/
 void print_block(const struct Block block);
 int add_payload(struct Block* pblock, const char* payload);
-void pack_block(const struct Block block, struct BlockBuf *pblock_buf);
+void pack_block(const struct Block block, uint8_t** pbuf, size_t* len);
 void hash_block(struct Block* pblock);
 #endif //_BLOCK_H

@@ -47,9 +47,9 @@ enum endpoint_dispatch_retval endpoint_dispatch(unsigned int endpoint_id,
  * @return execution result of endpoint
  */
 static enum endpoint_dispatch_retval chain_endpoint(int sockfd, struct BlockChain * pblock_chain) {
-    struct BlockBuf bbuf;
+    uint8_t *buf = NULL; //set to NULL to allocate initial memory
+    size_t len;
     int32_t nbytes;
-    bbuf.buf = NULL; //set to NULL to allocate initial memory
     
     //Send chain length
     uint32_t network_chain_length = htonl(pblock_chain->len);
@@ -59,8 +59,12 @@ static enum endpoint_dispatch_retval chain_endpoint(int sockfd, struct BlockChai
     }
 
     for (const struct Link* link = pblock_chain->head; link != NULL; link = link->next) {
-        pack_block(link->block, &bbuf);
-        if ((nbytes = send_buf(sockfd, bbuf.buf, bbuf.len)) == -1) {
+        pack_block(link->block, &buf, &len);
+        if (buf == NULL) {
+            fprintf(stderr, "Endpoints chain: failed to pack block buffer\n");
+            return DISPATCH_UNKNOWN_ERR;
+        }
+        if ((nbytes = send_buf(sockfd, buf, len)) == -1) {
                 perror("Endpoints: failed to send block");
                 return DISPATCH_SEND_FAIL;
         }
@@ -68,7 +72,7 @@ static enum endpoint_dispatch_retval chain_endpoint(int sockfd, struct BlockChai
     
     printf("Endpoints chain: chain transmitted successfully\n");
     //once done transmitting, free buffer
-    free(bbuf.buf);
+    free(buf);
     return DISPATCH_OK;
 }
 

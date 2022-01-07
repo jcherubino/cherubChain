@@ -154,25 +154,24 @@ int add_payload(struct Block* pblock, const char* payload) {
  * Populate block buffer. Fills block buffer with appropriate bitstream of data to transmit.
  * Manually pack to avoid platform dependant alignment/packing bytes in Block struct.
  * @param block to pack into buffer
- * @param pblock_buf block buffer to fill. Must have buf attribute set to NULL for initial 
- * allocation or a previously allocated set of memory (such as from previous call to pack_block)
- * @return void (instead populates the given pblock_buf)
+ * @param pbuf double ptr to buffer to fill. Must be set to NULL or previously allocated memory,
+ * such as from previous call to pack_block. Set to NULL on error
+ * @param len length of buffer. Set to 0 on error
+ * @return void
  */
-void pack_block(const struct Block block, struct BlockBuf *pblock_buf) {
-    size_t block_sz;
+void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
     uint16_t payload_sz = strlen(block.payload);
     //must send length length of payload which will vary between blocks.
     //payload length, Prev hash, hash, payload
-    block_sz = sizeof(uint16_t) + 2*sizeof(uint32_t) + payload_sz;
+    *len = sizeof(uint16_t) + 2*sizeof(uint32_t) + payload_sz;
 
     //realloc so successive calls to pack_block can re-use same memory for efficiency
-    pblock_buf->buf = realloc(pblock_buf->buf, block_sz);
+    *pbuf = realloc(*pbuf, *len);
 
-    if (pblock_buf->buf == NULL) {
-        pblock_buf->len = 0;
+    if (*pbuf == NULL) {
+        *len = 0;
+        return;
     }
-
-    pblock_buf->len = block_sz;
 
     //get network ordered data
     uint32_t net_prev_hash = htonl(block.prev_hash);
@@ -180,7 +179,7 @@ void pack_block(const struct Block block, struct BlockBuf *pblock_buf) {
     uint16_t net_payload_sz = htons(payload_sz);
 
     //pack data into buf
-    uint8_t *cur = pblock_buf->buf;
+    uint8_t *cur = *pbuf;
     memcpy(cur, &net_payload_sz, sizeof(uint16_t)); cur+= sizeof(uint16_t); 
     memcpy(cur, &net_prev_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
     memcpy(cur, &net_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
