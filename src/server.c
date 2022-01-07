@@ -5,59 +5,70 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include "server.h"
 #include <stdlib.h>
+#include <sys/time.h>
+#include "server.h"
 
 #define PORT "33333"  //port users connect to
 
 #define MAX_CONN_NUMBER 255 //number of sockfds connections we communicate with
+#define SEND_TIMEOUT_S 1 //number of seconds until timeout on sends
+#define RECV_TIMEOUT_S SEND_TIMEOUT_S //number of seconds until timeout on recvs
+
 #define TOTAL_CONNS MAX_CONN_NUMBER + 1 //number of sockfds in polling data (+1 for listener fd)
+
+//TODO: Refactor init and de-init to not dynamically allocate entire server data struct, but 
+//only the variable length array.
 
 //Internal functions
 static int get_listener(void);
 void *get_in_addr(struct sockaddr *sa);
 
-//Create server data struct instance with appropraite set up and information 
-//to begin communicating data via sockets. Returns null pointer on failure
-struct ServerData *initialise_server(void) {
-    struct ServerData * server_data = malloc(sizeof(struct ServerData));
+/**
+ * Create server data struct. Populate fields as required to begin communicating
+ * @param void
+ * @return populated server data struct. pollfds field will be NULL on failure
+ */
+struct ServerData initialise_server(void) {
+    struct ServerData server_data;
 
     //TODO: dynamically allocate instead of wasting space with MAX_CONN_NUMBER?
-    server_data->pollfds = malloc(sizeof(struct pollfd) * TOTAL_CONNS);
+    server_data.pollfds = malloc(sizeof(struct pollfd) * TOTAL_CONNS);
 
-    if (server_data == NULL) {
-        fprintf(stderr, "Failed to malloc memory for ServerData struct\n");
-        return NULL;
+    if (server_data.pollfds == NULL) {
+        fprintf(stderr, "Failed to malloc memory for pollfds\n");
+        return server_data;
     }
 
     // Set up and get a listening socket
-    server_data->listenerfd = get_listener();
+    server_data.listenerfd = get_listener();
 
-    //return NULL ptr to indicate error
-    if (server_data->listenerfd == -1) {
+    if (server_data.listenerfd == -1) {
         fprintf(stderr, "error getting listening socket\n");
-        free(server_data->pollfds);
-        free(server_data);
-        return NULL;
+        free(server_data.pollfds);
+        server_data.pollfds = NULL;
+        return server_data;
     }
     
     // Add the listener to the array
-    server_data->fd_count = 1; 
-    server_data->pollfds[0].fd = server_data->listenerfd;
-    server_data->pollfds[0].events = POLLIN; // Report ready to read on incoming connection
+    server_data.fd_count = 1; 
+    server_data.pollfds[0].fd = server_data.listenerfd;
+    server_data.pollfds[0].events = POLLIN; // Report ready to read on incoming connection
 
     return server_data;
 }
 
-void deinitialise_server(struct ServerData ** server_data) {
+void deinitialise_server(struct ServerData * pserver_data) {
     //close all sockets
-    for (int i = 0; i < (*server_data)->fd_count; i++) {
-        close((*server_data)->pollfds[i].fd);
+    for (int i = 0; i < pserver_data->fd_count; i++) {
+        close(pserver_data->pollfds[i].fd);
     }
 
-    free((*server_data)->pollfds);
-    free(*server_data);
-    *server_data = NULL;
+    free(pserver_data->pollfds);
+
+    pserver_data->pollfds = NULL;
+    pserver_data->fd_count = 0;
+    pserver_data->listenerfd = -1;
 }
 
 //Attempt to add to server.
@@ -96,6 +107,22 @@ int get_client(const int listenfd) {
         return -1;
     }
         
+    //Set send and receive timeouts
+    struct timeval tv;
+    tv.tv_sec = SEND_TIMEOUT_S;
+    tv.tv_usec = 0;
+    
+    if (setsockopt(new_fd, SOL_SOCKET, SO_SNDTIMEO, (void *)&tv, sizeof(tv)) != 0) {
+        fprintf(stderr, "Failed to set send timeout\n");
+        close(new_fd);
+        return -1; 
+    }
+    tv.tv_sec = RECV_TIMEOUT_S;
+    if (setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, (void *)&tv, sizeof(tv)) != 0) {
+        fprintf(stderr, "Failed to set receive timeout\n");
+        close(new_fd);
+        return -1; 
+    }
     //report client information
     
     char remote_ip[INET6_ADDRSTRLEN];
@@ -179,10 +206,14 @@ static int get_listener(void) {
     return sockfd;
 }
 
-
-//send buffer to given connected sockfd
-//return -1 on failure otherwise return number of bytes written
-//TODO: Update with new struct int fd_index
+/**
+ * Send buffer to given socket. Will continue to `send` until appropriate amount of 
+ * bytes transmitted or error occurs.
+ * @param sockfd connected socket to send buffer to
+ * @param buf pointer to databuffer to transmit
+ * @param len number of bytes to send
+ * @return number of bytes sent or -1 on failure
+ */
 int32_t send_buf(int sockfd, uint8_t * buf, size_t len) {
     size_t sent = 0;
     int n; 
