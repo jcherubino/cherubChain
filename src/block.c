@@ -73,7 +73,6 @@ struct Link* append_link(struct BlockChain* pblock_chain) {
     return plink;
 }
 
-
 /**
  * Free allocated memory for given block chain.
  * @param pblock_chain Chain to free

@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "server.h"
-
 #define PORT "33333"  //port users connect to
 
 #define MAX_CONN_NUMBER 255 //number of sockfds connections we communicate with
