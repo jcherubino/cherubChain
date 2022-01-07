@@ -117,7 +117,6 @@ int add_block(struct BlockChain * pblock_chain, const char * payload) {
     return 0;
 }
 
-//print single block to stdout
 /**
  * Print single block to stdou
  * @param block block to print
@@ -137,7 +136,7 @@ void print_block(const struct Block block) {
 int add_payload(struct Block* pblock, const char* payload) {
     //+1 for null char
     size_t payload_sz = strlen(payload) + 1;
-    payload_sz = (payload_sz > (MAX_PAYLOAD + 1)) ? MAX_PAYLOAD + 1: payload_sz;
+    payload_sz = (payload_sz > TOTAL_PAYLOAD_LEN) ? TOTAL_PAYLOAD_LEN: payload_sz;
 
     pblock->payload = malloc(payload_sz);
 
@@ -147,7 +146,7 @@ int add_payload(struct Block* pblock, const char* payload) {
     }
     memcpy(pblock->payload, payload, payload_sz);
     
-    //ensure null termination
+    //ensure null termination -1 because of 0 indexing
     *(pblock->payload + payload_sz - 1) = '\0';
     return 0;
 }

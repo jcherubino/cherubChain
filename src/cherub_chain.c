@@ -18,7 +18,7 @@ void sig_int_handler(int _) {
 
 int main() {
     struct BlockChain block_chain = initialise_chain();
-    char payload_buf[MAX_PAYLOAD]; 
+    char payload_buf[TOTAL_PAYLOAD_LEN]; 
     if (add_block(&block_chain, "Genesis block choo choo all aboard the cherub chrain") != 0) {
         exit(1);
     }

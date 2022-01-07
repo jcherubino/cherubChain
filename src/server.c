@@ -5,12 +5,16 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include "server.h"
 #include <stdlib.h>
+#include <sys/time.h>
+#include "server.h"
 
 #define PORT "33333"  //port users connect to
 
 #define MAX_CONN_NUMBER 255 //number of sockfds connections we communicate with
+#define SEND_TIMEOUT_S 1 //number of seconds until timeout on sends
+#define RECV_TIMEOUT_S SEND_TIMEOUT_S //number of seconds until timeout on recvs
+
 #define TOTAL_CONNS MAX_CONN_NUMBER + 1 //number of sockfds in polling data (+1 for listener fd)
 
 //TODO: Refactor init and de-init to not dynamically allocate entire server data struct, but 
@@ -103,6 +107,22 @@ int get_client(const int listenfd) {
         return -1;
     }
         
+    //Set send and receive timeouts
+    struct timeval tv;
+    tv.tv_sec = SEND_TIMEOUT_S;
+    tv.tv_usec = 0;
+    
+    if (setsockopt(new_fd, SOL_SOCKET, SO_SNDTIMEO, (void *)&tv, sizeof(tv)) != 0) {
+        fprintf(stderr, "Failed to set send timeout\n");
+        close(new_fd);
+        return -1; 
+    }
+    tv.tv_sec = RECV_TIMEOUT_S;
+    if (setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, (void *)&tv, sizeof(tv)) != 0) {
+        fprintf(stderr, "Failed to set receive timeout\n");
+        close(new_fd);
+        return -1; 
+    }
     //report client information
     
     char remote_ip[INET6_ADDRSTRLEN];

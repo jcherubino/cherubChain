@@ -2,8 +2,8 @@
 #define _BLOCK_H
 #include <stdint.h>
 
-#define MAX_PAYLOAD 1024 /*Max length of transaction*/
-
+#define MAX_PAYLOAD 1024 /*Max length of transaction exc null char*/
+#define TOTAL_PAYLOAD_LEN MAX_PAYLOAD + 1 /*Actual size of buffer to alloc considering null char*/
 
 struct Block {
     uint32_t prev_hash; /*hash of last block. 0 for gen*/
