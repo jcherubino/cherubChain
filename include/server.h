@@ -12,8 +12,8 @@ struct ServerData {
     int listenerfd; //pointer to listener object so we can tell when to 'accept' new conn
 };
 
-struct ServerData* initialise_server(void);
-void deinitialise_server(struct ServerData ** server_data);
+struct ServerData initialise_server(void);
+void deinitialise_server(struct ServerData * pserver_data);
 int add_fd_to_server(struct ServerData* server_data, int new_fd);
 int get_client(const int listenfd);
 int connect_to_node(const char *node_address);
