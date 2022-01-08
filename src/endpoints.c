@@ -108,6 +108,7 @@ static enum endpoint_dispatch_retval add_block_endpoint(int sockfd, struct Block
     }
     //Add null termination
     payload_buf[payload_sz] = '\0';
+
     if (add_block(pblock_chain, payload_buf) != 0) {
         return DISPATCH_UNKNOWN_ERR;
     }

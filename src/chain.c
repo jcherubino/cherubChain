@@ -9,7 +9,7 @@
 int main(int argc, char * argv[]) {
      
     if (argc != 2) {
-        fprintf(stderr, "usage: client hostname\n");
+        fprintf(stderr, "usage: chain hostname\n");
         return 1;
     }
 

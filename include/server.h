@@ -18,7 +18,7 @@ int add_fd_to_server(struct ServerData* server_data, int new_fd);
 int get_client(const int listenfd);
 int connect_to_node(const char *node_address);
 void delete_fd_from_server(struct ServerData* server_data, int fd_index);
-int32_t send_buf(int fd_index, uint8_t * buf, size_t len);
+int send_buf(int sockfd, const void * buf, size_t len);
 int receive_buf(int sockfd, void * buf, size_t len);
 
 #endif /*_SERVER_H*/

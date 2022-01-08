@@ -270,7 +270,7 @@ static int get_listener(void) {
  * @param len number of bytes to send
  * @return number of bytes sent or -1 on failure
  */
-int send_buf(int sockfd, uint8_t * buf, size_t len) {
+int send_buf(int sockfd, const void * buf, size_t len) {
     size_t sent = 0;
     int n; 
     while (sent < len) {

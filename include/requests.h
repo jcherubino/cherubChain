@@ -11,5 +11,6 @@ enum endpoint_id {
 };
 
 int request_chain_endpoint(int sockfd, struct BlockChain * pblock_chain);
+int request_add_block_endpoint(int sockfd, const char * payload);
 
 #endif //_REQUESTS_H
