@@ -270,7 +270,7 @@ static int get_listener(void) {
  * @param len number of bytes to send
  * @return number of bytes sent or -1 on failure
  */
-int32_t send_buf(int sockfd, uint8_t * buf, size_t len) {
+int send_buf(int sockfd, uint8_t * buf, size_t len) {
     size_t sent = 0;
     int n; 
     while (sent < len) {
@@ -281,5 +281,34 @@ int32_t send_buf(int sockfd, uint8_t * buf, size_t len) {
 
     //-1 on failure otherwise number sent
     return n == -1 ? -1: sent;
+}
+
+
+/**
+ * Receive buffer from a specified socket.
+ * @param sockfd socket to receive from
+ * @param buf buffer to populate
+ * @param len number of bytes to receive
+ * @return number of bytes received, -1 on error and 0 on socket close
+ */
+int receive_buf(int sockfd, void * buf, size_t len) {
+    size_t recvd = 0;
+    ssize_t n; 
+    while (recvd < len) {
+        n = recv(sockfd, buf+recvd, len-recvd, 0); 
+        //error or socket closed
+        if (n == -1) {
+            perror("recv");
+            return -1;
+        }
+        else if( n == 0) {
+            fprintf(stderr, "sockfd %d closed while receiving\n", sockfd);
+            return 0;
+        }
+        recvd += n;
+    }
+
+    //return number of bytes recvd
+    return recvd;
 }
 

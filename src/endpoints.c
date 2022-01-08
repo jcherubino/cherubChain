@@ -87,16 +87,9 @@ static enum endpoint_dispatch_retval add_block_endpoint(int sockfd, struct Block
     uint16_t network_payload_sz, payload_sz;
 
     //Read length of payload from sock
-    int ret = recv(sockfd, (uint8_t*)&network_payload_sz, sizeof(payload_sz), 0); 
+    int ret = receive_buf(sockfd, &network_payload_sz, sizeof(payload_sz));
     //failed
     if (ret <= 0) {
-        //socket closed by other end
-        if (ret == 0) {
-            fprintf(stderr, "Endpoints add_block: sockfd %d closed while receiving\n", sockfd);
-        }
-        else {
-            perror("Endpoints add_block");
-        }
         return DISPATCH_RECV_FAIL;
     }
     //convert to host byte-order
@@ -109,15 +102,8 @@ static enum endpoint_dispatch_retval add_block_endpoint(int sockfd, struct Block
     }
 
     //attempt to read that many bytes into a static buffer (make it the size of the payload)
-    ret = recv(sockfd, (uint8_t*)payload_buf, payload_sz, 0);
+    ret = receive_buf(sockfd, payload_buf, payload_sz);
     if (ret <= 0) {
-        //socket closed by other end
-        if (ret == 0) {
-            fprintf(stderr, "Endpoints add_block: sockfd %d closed while receiving\n", sockfd);
-        }
-        else {
-            perror("Endpoints add_block");
-        }
         return DISPATCH_RECV_FAIL;
     }
     //Add null termination

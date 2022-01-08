@@ -186,6 +186,41 @@ void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
     memcpy(cur, block.payload, payload_sz);
 }
 
+/**
+ * Unpack block buffer into link on chain.
+ * @param buf pointer to populated block buffer
+ * @param plink pointer to link to unpack into
+ * @return 0 on success and -1 on failure
+ */
+int unpack_block(uint8_t * buf, struct Link * plink) {
+    uint16_t host_payload_sz;
+    char tmp_payload_buf[TOTAL_PAYLOAD_LEN];
+    uint8_t* cur = buf; 
+
+    //Read payload size
+    host_payload_sz = ntohs(*((uint16_t*)cur));
+    cur += sizeof(host_payload_sz);
+
+    //Read hashes
+    plink->block.prev_hash = ntohl(*((uint32_t*)cur));
+    cur += sizeof(plink->block.prev_hash);
+    plink->block.hash = ntohl(*((uint32_t*)cur));
+    cur += sizeof(plink->block.hash);
+
+    //read paylod into buff
+    memcpy(tmp_payload_buf, cur, host_payload_sz);
+    //Null terminate
+    tmp_payload_buf[host_payload_sz] = '\0';
+
+    if (add_payload(&plink->block, tmp_payload_buf) != 0) {
+        //failed to add payload
+        return -1;
+    }
+    
+    hash_block(&plink->block);
+    return 0;
+}
+
 //Interface to hash block. 
 //Abstracts underlying hash function from user code
 void hash_block(struct Block* pblock) {
