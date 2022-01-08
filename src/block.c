@@ -1,3 +1,9 @@
+/**
+ * Implementation and related operations for creating and
+ * manipulating a block chain. 
+ * in the blockchain, 
+ * Written by Josh Cherubino (josh.cherubino@gmail.com)
+ */
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -247,13 +253,20 @@ int unpack_block(int sockfd, struct BlockChain * pblock_chain) {
     return 0;
 }
 
-//Interface to hash block. 
-//Abstracts underlying hash function from user code
+/**
+ * Interface to hash block. 
+ * @param pblock pointer to block
+ * @return void
+ */
 void hash_block(struct Block* pblock) {
     pblock->hash = hash_djb2((unsigned char *)pblock->payload);
 }
 
-//djb2 hash function - http://www.cse.yorku.ca/~oz/hash.html
+/**
+ * djb2 hash function (http://www.cse.yorku.ca/~oz/hash.html)
+ * @param payload payload of data to hash
+ * @return computed djb2 hash
+ */
 //TODO: Replace with cryptographic hash function
 static uint32_t hash_djb2(unsigned char *payload) {
     uint32_t hash = 5381;

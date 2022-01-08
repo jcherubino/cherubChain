@@ -1,3 +1,8 @@
+/**
+ * Interface to handle calling an appropriate endpoint function
+ * when requested by a connected socket.
+ * Written by Josh Cherubino (josh.cherubino@gmail.com)
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include "endpoints.h"

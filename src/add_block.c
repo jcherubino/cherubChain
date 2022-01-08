@@ -1,3 +1,7 @@
+/**
+ * Simple program to add a block to a running node
+ * Written by Josh Cherubino (josh.cherubino@gmail.com)
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

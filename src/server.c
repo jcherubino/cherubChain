@@ -1,3 +1,9 @@
+/**
+ * Implementation of tools to initialise and communicate
+ * data via sockets. Provides an interface to the `poll` syscall
+ * to handle multiple connections to a single device
+ * Written by Josh Cherubino (josh.cherubino@gmail.com)
+ */
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -57,6 +63,11 @@ struct ServerData initialise_server(void) {
     return server_data;
 }
 
+/**
+ * Deinitialise server. Close all socket connections and free allocated buffers
+ * @param pserver_data pointer to server data object to deinit
+ * @return void
+ */
 void deinitialise_server(struct ServerData * pserver_data) {
     //close all sockets
     for (int i = 0; i < pserver_data->fd_count; i++) {
@@ -70,7 +81,12 @@ void deinitialise_server(struct ServerData * pserver_data) {
     pserver_data->listenerfd = -1;
 }
 
-//Attempt to add to server.
+/**
+ * Add open socket fd to server.
+ * @param server_data server data struct to add sock to
+ * @param new_fd connected fd to add
+ * @return 0 on success or -1 on failure
+ */
 int add_fd_to_server(struct ServerData* server_data, int new_fd) {
     //N.B. +1 to account for listener
     if (server_data->fd_count == TOTAL_CONNS) {
@@ -85,8 +101,13 @@ int add_fd_to_server(struct ServerData* server_data, int new_fd) {
     return 0;
 }
 
-//Remove index from the set
+/**
+ * Remove socket from list using index in pollfds array.
+ * @param server_data server data struct to remove sock from
+ * @return void
+ */
 void delete_fd_from_server(struct ServerData* server_data, int fd_index) {
+    //TODO: Validate index is in ocrrect range using fd_count
     close(server_data->pollfds[fd_index].fd); //close sockfd
     //Copy end over sockfd to delete with last entry while also updating count
     server_data->pollfds[fd_index] = server_data->pollfds[--server_data->fd_count];
@@ -201,9 +222,12 @@ static void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-//Get 'listening' sockfd 
-//Return -1 on error
 //Code mostly from from Beej's Guide to Network Programming
+/**
+ * Get sock fd to listen for new connections
+ * @param void
+ * @return connected listener sockfd or -1 on error
+ */
 static int get_listener(void) {
     int sockfd;
     struct addrinfo hints, *servinfo, *p;

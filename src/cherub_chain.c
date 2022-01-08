@@ -1,3 +1,8 @@
+/**
+ * Main node binary that maintains a block chain 
+ * and communicates with other nodes and clients via sockets
+ * Written by Josh Cherubino (josh.cherubino@gmail.com)
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
