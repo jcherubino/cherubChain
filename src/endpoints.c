@@ -32,8 +32,8 @@ enum endpoint_dispatch_retval endpoint_dispatch(unsigned int endpoint_id,
         int sockfd, struct BlockChain * pblock_chain) {
 
     if (endpoint_id >= N_ENDPOINTS) {
-    fprintf(stderr, "Endpoints: Invalid endpoint: %d\n", endpoint_id);
-    return DISPATCH_INVALID_ENDPOINT;
+        fprintf(stderr, "Endpoints: Invalid endpoint: %d\n", endpoint_id);
+        return DISPATCH_INVALID_ENDPOINT;
     }
     
     //Run desired endpoint
@@ -54,23 +54,20 @@ static enum endpoint_dispatch_retval chain_endpoint(int sockfd, struct BlockChai
     //Send chain length
     uint32_t network_chain_length = htonl(pblock_chain->len);
     if ((nbytes = send_buf(sockfd, (uint8_t*)&network_chain_length, sizeof(uint32_t))) == -1) {
-        perror("Endpoints: failed to send chain length");
         return DISPATCH_SEND_FAIL;
     }
 
     for (const struct Link* link = pblock_chain->head; link != NULL; link = link->next) {
         pack_block(link->block, &buf, &len);
         if (buf == NULL) {
-            fprintf(stderr, "Endpoints chain: failed to pack block buffer\n");
             return DISPATCH_UNKNOWN_ERR;
         }
         if ((nbytes = send_buf(sockfd, buf, len)) == -1) {
-                perror("Endpoints: failed to send block");
                 return DISPATCH_SEND_FAIL;
         }
     }
     
-    printf("Endpoints chain: chain transmitted successfully\n");
+    printf("Endpoints: chain transmitted successfully\n");
     //once done transmitting, free buffer
     free(buf);
     return DISPATCH_OK;
@@ -96,7 +93,7 @@ static enum endpoint_dispatch_retval add_block_endpoint(int sockfd, struct Block
     payload_sz = ntohs(network_payload_sz); 
     
     if (payload_sz > MAX_PAYLOAD) {
-        fprintf(stderr, "Specified payload size %d larger than max allowed payload %d\n",
+        fprintf(stderr, "Endpoints: Specified payload size %d larger than max allowed payload %d\n",
                 payload_sz, MAX_PAYLOAD);
         return DISPATCH_INVALID_ARGS;
     }
@@ -112,7 +109,7 @@ static enum endpoint_dispatch_retval add_block_endpoint(int sockfd, struct Block
     if (add_block(pblock_chain, payload_buf) != 0) {
         return DISPATCH_UNKNOWN_ERR;
     }
-    printf("Endpoints add_block: block added successfully\n");
+    printf("Endpoints: block added successfully\n");
     return DISPATCH_OK;
 }
 

@@ -29,7 +29,7 @@ int main(int argc, char * argv[]) {
         return 3;
     }
 
-    printf("Block successfully added with payload %s\n", argv[2]);
+    printf("Add block: Block successfully added with payload %s\n", argv[2]);
     return 0;
 }
 

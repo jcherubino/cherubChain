@@ -35,7 +35,7 @@ struct ServerData initialise_server(void) {
     server_data.pollfds = malloc(sizeof(struct pollfd) * TOTAL_CONNS);
 
     if (server_data.pollfds == NULL) {
-        fprintf(stderr, "Failed to malloc memory for pollfds\n");
+        fprintf(stderr, "Server: Failed to malloc memory for pollfds\n");
         return server_data;
     }
 
@@ -43,7 +43,7 @@ struct ServerData initialise_server(void) {
     server_data.listenerfd = get_listener();
 
     if (server_data.listenerfd == -1) {
-        fprintf(stderr, "error getting listening socket\n");
+        fprintf(stderr, "Server: error getting listening socket\n");
         free(server_data.pollfds);
         server_data.pollfds = NULL;
         return server_data;
@@ -74,7 +74,7 @@ void deinitialise_server(struct ServerData * pserver_data) {
 int add_fd_to_server(struct ServerData* server_data, int new_fd) {
     //N.B. +1 to account for listener
     if (server_data->fd_count == TOTAL_CONNS) {
-        fprintf(stderr, "Max connections in server reached\n");
+        fprintf(stderr, "Server: Max connections in server reached\n");
         return -1;
     }
     
@@ -104,7 +104,7 @@ int get_client(const int listenfd) {
     int new_fd = accept(listenfd, (struct sockaddr *)&their_addr, &sin_size);
 
     if (new_fd == -1) {
-        perror("accept");
+        perror("Server: accept");
         close(new_fd);
         return -1;
     }
@@ -115,13 +115,13 @@ int get_client(const int listenfd) {
     tv.tv_usec = 0;
     
     if (setsockopt(new_fd, SOL_SOCKET, SO_SNDTIMEO, (void *)&tv, sizeof(tv)) != 0) {
-        fprintf(stderr, "Failed to set send timeout\n");
+        fprintf(stderr, "Server: Failed to set send timeout\n");
         close(new_fd);
         return -1; 
     }
     tv.tv_sec = RECV_TIMEOUT_S;
     if (setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, (void *)&tv, sizeof(tv)) != 0) {
-        fprintf(stderr, "Failed to set receive timeout\n");
+        fprintf(stderr, "Server: Failed to set receive timeout\n");
         close(new_fd);
         return -1; 
     }
@@ -150,7 +150,7 @@ int connect_to_node(const char *node_address) {
     hints.ai_socktype = SOCK_STREAM; //TCP stream
 
     if ((ret = getaddrinfo(node_address, PORT, &hints, &node_info)) != 0) {
-        fprintf(stderr, "server: %s\n", gai_strerror(ret));
+        fprintf(stderr, "Server: getaddrinfo: %s\n", gai_strerror(ret));
         return -1;
     }	
 
@@ -158,12 +158,12 @@ int connect_to_node(const char *node_address) {
 	for(p = node_info; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype,
 				p->ai_protocol)) == -1) {
-			perror("Server connect_to_node: socket");
+			perror("Server: socket");
 			continue;
 		}
 
 		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			perror("Server connect_to_node: connect");
+			perror("Server: connect");
 			close(sockfd);
 			continue;
 		}
@@ -172,7 +172,7 @@ int connect_to_node(const char *node_address) {
 	}
 
 	if (p == NULL) {
-		fprintf(stderr, "Server connect_to_node: failed to connect\n");
+		fprintf(stderr, "Server: failed to connect\n");
 		return -1;
 	}
 
@@ -216,7 +216,7 @@ static int get_listener(void) {
     hints.ai_flags = AI_PASSIVE; // use my IP
 
     if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        fprintf(stderr, "Server: getaddrinfo: %s\n", gai_strerror(rv));
         return -1;
     }
 
@@ -224,19 +224,19 @@ static int get_listener(void) {
     for(p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype,
                 p->ai_protocol)) == -1) {
-            perror("server: socket");
+            perror("Server: socket");
             continue;
         }
 
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
                 sizeof(int)) == -1) {
-            perror("setsockopt");
+            perror("Server: setsockopt");
             return -1;
         }
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             close(sockfd);
-            perror("server: bind");
+            perror("Server: bind");
             continue;
         }
 
@@ -247,12 +247,12 @@ static int get_listener(void) {
     freeaddrinfo(servinfo); // all done with this structure
 
     if (p == NULL)  {
-        fprintf(stderr, "server: failed to bind\n");
+        fprintf(stderr, "Server: failed to bind\n");
         return -1;
     }
 
     if (listen(sockfd, MAX_CONN_NUMBER) == -1) {
-        perror("listen");
+        perror("Server: listen");
         close(sockfd);
         return -1;
     }
@@ -275,12 +275,14 @@ int send_buf(int sockfd, const void * buf, size_t len) {
     int n; 
     while (sent < len) {
         n = send(sockfd, buf+sent, len-sent, 0); 
-        if (n == -1) break;
+        if (n == -1) {
+            perror("Server: send");
+            return -1;
+        }
         sent += n;
     }
 
-    //-1 on failure otherwise number sent
-    return n == -1 ? -1: sent;
+    return sent;
 }
 
 
@@ -298,11 +300,11 @@ int receive_buf(int sockfd, void * buf, size_t len) {
         n = recv(sockfd, buf+recvd, len-recvd, 0); 
         //error or socket closed
         if (n == -1) {
-            perror("recv");
+            perror("Server: recv");
             return -1;
         }
         else if( n == 0) {
-            fprintf(stderr, "sockfd %d closed while receiving\n", sockfd);
+            fprintf(stderr, "Server: sockfd %d closed while receiving\n", sockfd);
             return 0;
         }
         recvd += n;
