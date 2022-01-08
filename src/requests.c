@@ -54,7 +54,7 @@ int request_add_block_endpoint(int sockfd, const char * payload) {
     
     size_t payload_len = strlen(payload);
     if (payload_len > MAX_PAYLOAD) {
-        fprintf(stderr, "Specified payload size %lu larger than max allowed payload%d\n",
+        fprintf(stderr, "Requests: Specified payload size %lu larger than max allowed payload%d\n",
                 payload_len, MAX_PAYLOAD);
         return -1;
     }
@@ -62,12 +62,10 @@ int request_add_block_endpoint(int sockfd, const char * payload) {
     uint16_t network_payload_len = htons((uint16_t)payload_len);
 
     if (send_buf(sockfd, &network_payload_len, sizeof(network_payload_len)) == -1) {
-        perror("Requests request_add_block");
         return -1;
     }
 
     if (send_buf(sockfd, payload, payload_len) == -1) {
-        perror("Requests request_add_block");
         return -1;
     }
 
@@ -84,7 +82,7 @@ static inline int send_endpoint_request(int sockfd, const enum endpoint_id endpo
     ssize_t sent = send(sockfd, &id, 1, 0);
 
     if (sent == -1) {
-        perror("Requests send_endpoint_request");
+        perror("Requests: send");
         return -1;
     }
     return 0;

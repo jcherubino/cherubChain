@@ -38,13 +38,13 @@ int main() {
     act.sa_handler = sig_int_handler;
     sigaction(SIGINT, &act, NULL);
 
-    printf("Initialisation complete, entering node loop\n"); 
+    printf("Cherub chain: Initialisation complete, entering node loop\n"); 
     //main processing loop
     while(prog_run_status) {
         int poll_count = poll(server_data.pollfds, server_data.fd_count, 1);
 
         if (poll_count == -1) {
-            perror("cherub chain: poll");
+            perror("Cherub chain: poll");
         }
 
         // Run through the existing connections looking for data to read
@@ -67,25 +67,17 @@ int main() {
                     uint8_t endpoint_id;
                     //Read endpoint id to determine appropriate endpoint to run
                     int sender_fd = server_data.pollfds[i].fd;
-                    size_t nbytes = recv(sender_fd, &endpoint_id, 1, 0);
+                    size_t nbytes = receive_buf(sender_fd, &endpoint_id, 1);
 
                     if (nbytes <= 0) {
                         // Got error or connection closed by client
-                        if (nbytes == 0) {
-                            // Connection closed
-                            printf("Server: socket %d hung up\n", sender_fd);
-                        } else {
-                            perror("cherub chain: recv");
-                        }
-                        
-                        //close and remove closed fd from polling data 
                         delete_fd_from_server(&server_data, i);
 
                     } else {
                         //Try to dispatch to the requested endpoint
                         if (endpoint_dispatch(endpoint_id, sender_fd, &block_chain) != DISPATCH_OK) {
                             //If we do not receive OK response then drop the connection
-                            fprintf(stderr, "Dropping connection: %d\n", sender_fd);
+                            fprintf(stderr, "Cherub chain: Dropping connection: %d\n", sender_fd);
                             delete_fd_from_server(&server_data, i); 
                         }
                     }
@@ -94,7 +86,7 @@ int main() {
         } // END looping through file descriptors
     } // END main node loop
     
-    printf("Shutdown signal received -- stopping node\n"); 
+    printf("Cherub chain: Shutdown signal received -- stopping node\n"); 
 
     deinitialise_server(&server_data);
     deinitialise_chain(&block_chain);

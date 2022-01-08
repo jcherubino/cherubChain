@@ -172,6 +172,7 @@ void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
     *pbuf = realloc(*pbuf, *len);
 
     if (*pbuf == NULL) {
+        fprintf(stderr, "Block: failed to allocate memory for buffer\n");
         *len = 0;
         return;
     }
