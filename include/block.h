@@ -1,6 +1,7 @@
 #ifndef _BLOCK_H
 #define _BLOCK_H
 #include <stdint.h>
+#include <stdlib.h>
 
 #define MAX_PAYLOAD 1024 /*Max length of transaction exc null char*/
 #define TOTAL_PAYLOAD_LEN MAX_PAYLOAD + 1 /*Actual size of buffer to alloc considering null char*/
@@ -32,6 +33,7 @@ void deinitialise_chain(struct BlockChain * pblock_chain);
 void print_chain(const struct BlockChain * pblock_chain);
 struct Link* append_link(struct BlockChain* pblock_chain);
 int add_block(struct BlockChain * pblock_chain, const char * payload);
+int unpack_block(int sockfd, struct BlockChain * pblock_chain);
 
 /*Operations on block*/
 void print_block(const struct Block block);

@@ -5,15 +5,17 @@ PROG = cherub_chain
 
 .PHONY: clean default
 
-default: all
-
 all: cherub_chain chain_endpoint
 
-cherub_chain: cherub_chain.o block.o server.o endpoints.o
-	$(CC) $(CFLAGS) build/cherub_chain.o build/block.o build/server.o build/endpoints.o -o cherub_chain 
+cherub_chain: cherub_chain.o block.o server.o endpoints.o requests.o
+	mkdir -p bin
+	$(CC) $(CFLAGS) build/cherub_chain.o build/block.o build/server.o \
+		build/endpoints.o build/requests.o -o bin/cherub_chain 
 
-chain_endpoint: chain_endpoint.o block.o server.o
-	$(CC) $(CFLAGS) build/chain_endpoint.o build/block.o build/server.o -o chain_endpoint
+chain_endpoint: chain_endpoint.o block.o server.o requests.o
+	mkdir -p bin
+	$(CC) $(CFLAGS) build/chain_endpoint.o build/block.o build/server.o \
+		build/requests.o -o bin/chain_endpoint
 
 cherub_chain.o: src/cherub_chain.c 
 	mkdir -p build
@@ -22,6 +24,10 @@ cherub_chain.o: src/cherub_chain.c
 chain_endpoint.o: src/chain_endpoint.c
 	mkdir -p build
 	$(CC) $(CFLAGS) -c src/chain_endpoint.c -o build/chain_endpoint.o
+
+requests.o: src/requests.c include/requests.h
+	mkdir -p build
+	$(CC) $(CFLAGS) -c src/requests.c -o build/requests.o
 
 block.o: src/block.c include/block.h
 	mkdir -p build
@@ -37,5 +43,4 @@ endpoints.o: src/endpoints.c include/endpoints.h
 
 clean:
 	rm -rf build
-	rm ./cherub_chain
-	rm ./chain_endpoint
+	rm -rf bin

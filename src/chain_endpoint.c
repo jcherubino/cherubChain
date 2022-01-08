@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "block.h"
 #include "server.h"
+#include "requests.h"
 
 //Request chain endpoint on node at specified IP
 int main(int argc, char * argv[]) {
@@ -20,8 +21,19 @@ int main(int argc, char * argv[]) {
     }
     
     //Get chain
+    struct BlockChain block_chain = initialise_chain();
+
+    int ret = request_chain_endpoint(node_fd, &block_chain);
+
+    print_chain(&block_chain);
 
     close(node_fd);
+    deinitialise_chain(&block_chain);
+    
+    //failed
+    if (ret == -1) {
+        return 3;
+    }
     return 0;
 }
 

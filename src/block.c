@@ -2,7 +2,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+
 #include "block.h"
+#include "server.h"
+
 
 #define BLOCK_DIV "------\n"
 
@@ -187,28 +190,50 @@ void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
 }
 
 /**
- * Unpack block buffer into link on chain.
- * @param buf pointer to populated block buffer
- * @param plink pointer to link to unpack into
+ * Unpack block buffer onto end of chain
+ * @param sockfd socket to read buffer data from
+ * @param pblock_chain block chain pointer to unpack
  * @return 0 on success and -1 on failure
  */
-int unpack_block(uint8_t * buf, struct Link * plink) {
-    uint16_t host_payload_sz;
+int unpack_block(int sockfd, struct BlockChain * pblock_chain) {
+    uint16_t network_payload_sz, host_payload_sz;
+    uint32_t network_prev_hash, network_hash;
     char tmp_payload_buf[TOTAL_PAYLOAD_LEN];
-    uint8_t* cur = buf; 
 
+    struct Link * plink = append_link(pblock_chain);
+    if (plink == NULL) {
+        return -1;
+    }
+        
     //Read payload size
-    host_payload_sz = ntohs(*((uint16_t*)cur));
-    cur += sizeof(host_payload_sz);
+    int ret = receive_buf(sockfd, &network_payload_sz, sizeof(network_payload_sz));
+    //Failed
+    if (ret <= 0) {
+        return -1;
+    }
+    //convert to host byte order
+    host_payload_sz = ntohs(network_payload_sz);
 
     //Read hashes
-    plink->block.prev_hash = ntohl(*((uint32_t*)cur));
-    cur += sizeof(plink->block.prev_hash);
-    plink->block.hash = ntohl(*((uint32_t*)cur));
-    cur += sizeof(plink->block.hash);
+    ret = receive_buf(sockfd, &network_prev_hash, sizeof(network_prev_hash));
+    if (ret <= 0) {
+        return -1;
+    }
 
-    //read paylod into buff
-    memcpy(tmp_payload_buf, cur, host_payload_sz);
+    ret = receive_buf(sockfd, &network_hash, sizeof(network_hash));
+    if (ret <= 0) {
+        return -1;
+    }
+
+    //Store in link with appropriate byte order
+    plink->block.prev_hash = ntohl(network_prev_hash);
+    plink->block.hash = ntohl(network_hash);
+
+    //read payload 
+    ret = receive_buf(sockfd, tmp_payload_buf, host_payload_sz);
+    if (ret <= 0) {
+        return -1;
+    }
     //Null terminate
     tmp_payload_buf[host_payload_sz] = '\0';
 
