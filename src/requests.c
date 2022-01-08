@@ -1,3 +1,8 @@
+/**
+ * Interface to make a properly formed request to a particular server endpoint
+ * and process the returned values where appropriate
+ * Written by Josh Cherubino (josh.cherubino@gmail.com)
+ */
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>

@@ -1,3 +1,8 @@
+/**
+ * Simple program to print the chain of a running node
+ * to stdout
+ * Written by Josh Cherubino (josh.cherubino@gmail.com)
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
