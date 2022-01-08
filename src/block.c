@@ -2,7 +2,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+
 #include "block.h"
+#include "server.h"
+
 
 #define BLOCK_DIV "------\n"
 
@@ -72,7 +75,6 @@ struct Link* append_link(struct BlockChain* pblock_chain) {
 
     return plink;
 }
-
 
 /**
  * Free allocated memory for given block chain.
@@ -155,25 +157,24 @@ int add_payload(struct Block* pblock, const char* payload) {
  * Populate block buffer. Fills block buffer with appropriate bitstream of data to transmit.
  * Manually pack to avoid platform dependant alignment/packing bytes in Block struct.
  * @param block to pack into buffer
- * @param pblock_buf block buffer to fill. Must have buf attribute set to NULL for initial 
- * allocation or a previously allocated set of memory (such as from previous call to pack_block)
- * @return void (instead populates the given pblock_buf)
+ * @param pbuf double ptr to buffer to fill. Must be set to NULL or previously allocated memory,
+ * such as from previous call to pack_block. Set to NULL on error
+ * @param len length of buffer. Set to 0 on error
+ * @return void
  */
-void pack_block(const struct Block block, struct BlockBuf *pblock_buf) {
-    size_t block_sz;
+void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
     uint16_t payload_sz = strlen(block.payload);
     //must send length length of payload which will vary between blocks.
     //payload length, Prev hash, hash, payload
-    block_sz = sizeof(uint16_t) + 2*sizeof(uint32_t) + payload_sz;
+    *len = sizeof(uint16_t) + 2*sizeof(uint32_t) + payload_sz;
 
     //realloc so successive calls to pack_block can re-use same memory for efficiency
-    pblock_buf->buf = realloc(pblock_buf->buf, block_sz);
+    *pbuf = realloc(*pbuf, *len);
 
-    if (pblock_buf->buf == NULL) {
-        pblock_buf->len = 0;
+    if (*pbuf == NULL) {
+        *len = 0;
+        return;
     }
-
-    pblock_buf->len = block_sz;
 
     //get network ordered data
     uint32_t net_prev_hash = htonl(block.prev_hash);
@@ -181,11 +182,68 @@ void pack_block(const struct Block block, struct BlockBuf *pblock_buf) {
     uint16_t net_payload_sz = htons(payload_sz);
 
     //pack data into buf
-    uint8_t *cur = pblock_buf->buf;
+    uint8_t *cur = *pbuf;
     memcpy(cur, &net_payload_sz, sizeof(uint16_t)); cur+= sizeof(uint16_t); 
     memcpy(cur, &net_prev_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
     memcpy(cur, &net_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
     memcpy(cur, block.payload, payload_sz);
+}
+
+/**
+ * Unpack block buffer onto end of chain
+ * @param sockfd socket to read buffer data from
+ * @param pblock_chain block chain pointer to unpack
+ * @return 0 on success and -1 on failure
+ */
+int unpack_block(int sockfd, struct BlockChain * pblock_chain) {
+    uint16_t network_payload_sz, host_payload_sz;
+    uint32_t network_prev_hash, network_hash;
+    char tmp_payload_buf[TOTAL_PAYLOAD_LEN];
+
+    struct Link * plink = append_link(pblock_chain);
+    if (plink == NULL) {
+        return -1;
+    }
+        
+    //Read payload size
+    int ret = receive_buf(sockfd, &network_payload_sz, sizeof(network_payload_sz));
+    //Failed
+    if (ret <= 0) {
+        return -1;
+    }
+    //convert to host byte order
+    host_payload_sz = ntohs(network_payload_sz);
+
+    //Read hashes
+    ret = receive_buf(sockfd, &network_prev_hash, sizeof(network_prev_hash));
+    if (ret <= 0) {
+        return -1;
+    }
+
+    ret = receive_buf(sockfd, &network_hash, sizeof(network_hash));
+    if (ret <= 0) {
+        return -1;
+    }
+
+    //Store in link with appropriate byte order
+    plink->block.prev_hash = ntohl(network_prev_hash);
+    plink->block.hash = ntohl(network_hash);
+
+    //read payload 
+    ret = receive_buf(sockfd, tmp_payload_buf, host_payload_sz);
+    if (ret <= 0) {
+        return -1;
+    }
+    //Null terminate
+    tmp_payload_buf[host_payload_sz] = '\0';
+
+    if (add_payload(&plink->block, tmp_payload_buf) != 0) {
+        //failed to add payload
+        return -1;
+    }
+    
+    hash_block(&plink->block);
+    return 0;
 }
 
 //Interface to hash block. 

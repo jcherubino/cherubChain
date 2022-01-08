@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "server.h"
-
 #define PORT "33333"  //port users connect to
 
 #define MAX_CONN_NUMBER 255 //number of sockfds connections we communicate with
@@ -22,7 +21,7 @@
 
 //Internal functions
 static int get_listener(void);
-void *get_in_addr(struct sockaddr *sa);
+static void *get_in_addr(struct sockaddr *sa);
 
 /**
  * Create server data struct. Populate fields as required to begin communicating
@@ -93,8 +92,11 @@ void delete_fd_from_server(struct ServerData* server_data, int fd_index) {
     server_data->pollfds[fd_index] = server_data->pollfds[--server_data->fd_count];
 }
 
-//get client sockfd to communicate on.
-//Takes open sockfd to 'accept' with
+/**
+ * Get client sockfd to commmunicate on
+ * @param listenfd open listening socket to communicate on
+ * @return returns connected socket or -1 on failure
+ */
 int get_client(const int listenfd) {
     struct sockaddr_storage their_addr; // connector's address information
     socklen_t sin_size = sizeof(their_addr);
@@ -134,9 +136,63 @@ int get_client(const int listenfd) {
     return new_fd;
 }
 
+/**
+ * Connect to node
+ * @param node_address IP of node to connect to
+ * @return sockfd of connected node or -1 on failure
+ */
+int connect_to_node(const char *node_address) {
+    struct addrinfo hints, *node_info, *p;
+    int ret, sockfd;
+    
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC; //IPV4 or IPV6
+    hints.ai_socktype = SOCK_STREAM; //TCP stream
 
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
+    if ((ret = getaddrinfo(node_address, PORT, &hints, &node_info)) != 0) {
+        fprintf(stderr, "server: %s\n", gai_strerror(ret));
+        return -1;
+    }	
+
+    //loop through all the results and connect to the first we can
+	for(p = node_info; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == -1) {
+			perror("Server connect_to_node: socket");
+			continue;
+		}
+
+		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			perror("Server connect_to_node: connect");
+			close(sockfd);
+			continue;
+		}
+
+		break;
+	}
+
+	if (p == NULL) {
+		fprintf(stderr, "Server connect_to_node: failed to connect\n");
+		return -1;
+	}
+
+    //report client information
+    char remote_ip[INET6_ADDRSTRLEN];
+
+    printf("Server: connected to node %s\n",
+            inet_ntop(p->ai_family,
+                get_in_addr((struct sockaddr*)p->ai_addr), remote_ip, INET6_ADDRSTRLEN));
+
+	freeaddrinfo(node_info); // all done with this structure
+    return sockfd;
+}
+
+/**
+ * Get IP address from given sockaddr struct. Ip version agnostic
+ * @param populated sockaddr struct
+ * @return void
+ */
+static void *get_in_addr(struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
@@ -214,7 +270,7 @@ static int get_listener(void) {
  * @param len number of bytes to send
  * @return number of bytes sent or -1 on failure
  */
-int32_t send_buf(int sockfd, uint8_t * buf, size_t len) {
+int send_buf(int sockfd, const void * buf, size_t len) {
     size_t sent = 0;
     int n; 
     while (sent < len) {
@@ -225,5 +281,34 @@ int32_t send_buf(int sockfd, uint8_t * buf, size_t len) {
 
     //-1 on failure otherwise number sent
     return n == -1 ? -1: sent;
+}
+
+
+/**
+ * Receive buffer from a specified socket.
+ * @param sockfd socket to receive from
+ * @param buf buffer to populate
+ * @param len number of bytes to receive
+ * @return number of bytes received, -1 on error and 0 on socket close
+ */
+int receive_buf(int sockfd, void * buf, size_t len) {
+    size_t recvd = 0;
+    ssize_t n; 
+    while (recvd < len) {
+        n = recv(sockfd, buf+recvd, len-recvd, 0); 
+        //error or socket closed
+        if (n == -1) {
+            perror("recv");
+            return -1;
+        }
+        else if( n == 0) {
+            fprintf(stderr, "sockfd %d closed while receiving\n", sockfd);
+            return 0;
+        }
+        recvd += n;
+    }
+
+    //return number of bytes recvd
+    return recvd;
 }
 
