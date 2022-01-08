@@ -8,8 +8,8 @@ Mini implementation of simple blockchain written in pure C for *nix systems (pro
 - [X] Implement dynamically adding node
 - [X] Implement printing out list locally
 - [ ] Implement client/server socket interface to perform actions with node. 
-    - [ ] Get chain
-    - [ ] Add transaction
+    - [X] Get chain
+    - [X] Add transaction
     - [ ] Add node
 - [ ] Implement peer to peer network to allow nodes to interface
 - [ ] Implement consensus algorithm
