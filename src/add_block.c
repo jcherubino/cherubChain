@@ -12,19 +12,19 @@
 //Request chain endpoint on node at specified IP
 int main(int argc, char * argv[]) {
      
-    if (argc != 3) {
-        fprintf(stderr, "usage: add_block hostname payload\n");
+    if (argc != 4) {
+        fprintf(stderr, "usage: add_block hostname servname payload\n");
         return 1;
     }
 
     //connect to node with given hostname
-    int node_fd = connect_to_node(argv[1]);
+    int node_fd = connect_to_node(argv[1], argv[2]);
 
     if (node_fd == -1) {
         return 2;
     }
     
-    int ret = request_add_block_endpoint(node_fd, argv[2]);
+    int ret = request_add_block_endpoint(node_fd, argv[3]);
 
     close(node_fd);
     
@@ -33,7 +33,7 @@ int main(int argc, char * argv[]) {
         return 3;
     }
 
-    printf("Add block: Block successfully added with payload %s\n", argv[2]);
+    printf("Add block: Block successfully added with payload %s\n", argv[3]);
     return 0;
 }
 

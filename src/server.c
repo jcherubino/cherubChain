@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include "server.h"
-#define PORT "33333"  //port users connect to
 
 #define MAX_CONN_NUMBER 255 //number of sockfds connections we communicate with
 #define SEND_TIMEOUT_S 1 //number of seconds until timeout on sends
@@ -26,15 +25,15 @@
 //only the variable length array.
 
 //Internal functions
-static int get_listener(void);
+static int get_listener(const char * servname);
 static void *get_in_addr(struct sockaddr *sa);
 
 /**
  * Create server data struct. Populate fields as required to begin communicating
- * @param void
+ * @param servname port number or service name 
  * @return populated server data struct. pollfds field will be NULL on failure
  */
-struct ServerData initialise_server(void) {
+struct ServerData initialise_server(const char * servname) {
     struct ServerData server_data;
 
     //TODO: dynamically allocate instead of wasting space with MAX_CONN_NUMBER?
@@ -46,7 +45,7 @@ struct ServerData initialise_server(void) {
     }
 
     // Set up and get a listening socket
-    server_data.listenerfd = get_listener();
+    server_data.listenerfd = get_listener(servname);
 
     if (server_data.listenerfd == -1) {
         fprintf(stderr, "Server: error getting listening socket\n");
@@ -160,9 +159,10 @@ int get_client(const int listenfd) {
 /**
  * Connect to node
  * @param node_address IP of node to connect to
+ * @param servname port number or service name 
  * @return sockfd of connected node or -1 on failure
  */
-int connect_to_node(const char *node_address) {
+int connect_to_node(const char *node_address, const char *servname) {
     struct addrinfo hints, *node_info, *p;
     int ret, sockfd;
     
@@ -170,7 +170,7 @@ int connect_to_node(const char *node_address) {
     hints.ai_family = AF_UNSPEC; //IPV4 or IPV6
     hints.ai_socktype = SOCK_STREAM; //TCP stream
 
-    if ((ret = getaddrinfo(node_address, PORT, &hints, &node_info)) != 0) {
+    if ((ret = getaddrinfo(node_address, servname, &hints, &node_info)) != 0) {
         fprintf(stderr, "Server: getaddrinfo: %s\n", gai_strerror(ret));
         return -1;
     }	
@@ -200,9 +200,10 @@ int connect_to_node(const char *node_address) {
     //report client information
     char remote_ip[INET6_ADDRSTRLEN];
 
-    printf("Server: connected to node %s\n",
+    printf("Server: connected to node %s on service %s\n",
             inet_ntop(p->ai_family,
-                get_in_addr((struct sockaddr*)p->ai_addr), remote_ip, INET6_ADDRSTRLEN));
+                get_in_addr((struct sockaddr*)p->ai_addr), remote_ip, INET6_ADDRSTRLEN),
+            servname);
 
 	freeaddrinfo(node_info); // all done with this structure
     return sockfd;
@@ -225,10 +226,10 @@ static void *get_in_addr(struct sockaddr *sa)
 //Code mostly from from Beej's Guide to Network Programming
 /**
  * Get sock fd to listen for new connections
- * @param void
+ * @param servname port number or service name 
  * @return connected listener sockfd or -1 on error
  */
-static int get_listener(void) {
+static int get_listener(const char * servname) {
     int sockfd;
     struct addrinfo hints, *servinfo, *p;
     int yes=1;
@@ -239,7 +240,7 @@ static int get_listener(void) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
 
-    if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo(NULL, servname, &hints, &servinfo)) != 0) {
         fprintf(stderr, "Server: getaddrinfo: %s\n", gai_strerror(rv));
         return -1;
     }
