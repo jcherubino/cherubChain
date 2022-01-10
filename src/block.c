@@ -116,7 +116,7 @@ int add_block(struct BlockChain * pblock_chain, const char * payload) {
         return -1;
     }
     
-    if (add_payload(&plink->block, payload) != 0) {
+    if (add_payload(&plink->block, payload, 0) != 0) {
         //failed to add payload
         return -1;
     }
@@ -138,12 +138,16 @@ void print_block(const struct Block block) {
 /**
  * Set block payload to null terminated string. Allocates and copies memory
  * @param pblock Block to add payload to
- * @param payload string to copy into payload
+ * @param payload null terminated string to copy into payload
+ * @param length_known bool specifiying if the given block is storing the legnth of the payload or not
  * @return 0 on success, -1 otherwise
  */
-int add_payload(struct Block* pblock, const char* payload) {
+int add_payload(struct Block* pblock, const char* payload, uint8_t length_known) {
+    if (!length_known) {
+        pblock->payload_len = strlen(payload);
+    }
     //+1 for null char
-    size_t payload_sz = strlen(payload) + 1;
+    size_t payload_sz = pblock->payload_len + 1; //+1 for null char consideration
     payload_sz = (payload_sz > TOTAL_PAYLOAD_LEN) ? TOTAL_PAYLOAD_LEN: payload_sz;
 
     pblock->payload = malloc(payload_sz);
@@ -154,8 +158,8 @@ int add_payload(struct Block* pblock, const char* payload) {
     }
     memcpy(pblock->payload, payload, payload_sz);
     
-    //ensure null termination -1 because of 0 indexing
-    *(pblock->payload + payload_sz - 1) = '\0';
+    //ensure null termination
+    *(pblock->payload + pblock->payload_len) = '\0';
     return 0;
 }
 
@@ -169,10 +173,9 @@ int add_payload(struct Block* pblock, const char* payload) {
  * @return void
  */
 void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
-    uint16_t payload_sz = strlen(block.payload);
     //must send length length of payload which will vary between blocks.
     //payload length, Prev hash, hash, payload
-    *len = sizeof(uint16_t) + 2*sizeof(uint32_t) + payload_sz;
+    *len = sizeof(uint16_t) + 2*sizeof(uint32_t) + block.payload_len;
 
     //realloc so successive calls to pack_block can re-use same memory for efficiency
     *pbuf = realloc(*pbuf, *len);
@@ -186,14 +189,14 @@ void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
     //get network ordered data
     uint32_t net_prev_hash = htonl(block.prev_hash);
     uint32_t net_hash = htonl(block.hash);
-    uint16_t net_payload_sz = htons(payload_sz);
+    uint16_t net_payload_sz = htons(block.payload_len);
 
     //pack data into buf
     uint8_t *cur = *pbuf;
     memcpy(cur, &net_payload_sz, sizeof(uint16_t)); cur+= sizeof(uint16_t); 
     memcpy(cur, &net_prev_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
     memcpy(cur, &net_hash, sizeof(uint32_t)); cur+= sizeof(uint32_t); 
-    memcpy(cur, block.payload, payload_sz);
+    memcpy(cur, block.payload, block.payload_len);
 }
 
 /**
@@ -203,7 +206,7 @@ void pack_block(const struct Block block, uint8_t** pbuf, size_t* len) {
  * @return 0 on success and -1 on failure
  */
 int unpack_block(int sockfd, struct BlockChain * pblock_chain) {
-    uint16_t network_payload_sz, host_payload_sz;
+    uint16_t network_payload_sz;
     uint32_t network_prev_hash, network_hash;
     char tmp_payload_buf[TOTAL_PAYLOAD_LEN];
 
@@ -219,7 +222,7 @@ int unpack_block(int sockfd, struct BlockChain * pblock_chain) {
         return -1;
     }
     //convert to host byte order
-    host_payload_sz = ntohs(network_payload_sz);
+    plink->block.payload_len = ntohs(network_payload_sz);
 
     //Read hashes
     ret = receive_buf(sockfd, &network_prev_hash, sizeof(network_prev_hash));
@@ -237,14 +240,14 @@ int unpack_block(int sockfd, struct BlockChain * pblock_chain) {
     plink->block.hash = ntohl(network_hash);
 
     //read payload 
-    ret = receive_buf(sockfd, tmp_payload_buf, host_payload_sz);
+    ret = receive_buf(sockfd, tmp_payload_buf, plink->block.payload_len);
     if (ret <= 0) {
         return -1;
     }
     //Null terminate
-    tmp_payload_buf[host_payload_sz] = '\0';
+    tmp_payload_buf[plink->block.payload_len] = '\0';
 
-    if (add_payload(&plink->block, tmp_payload_buf) != 0) {
+    if (add_payload(&plink->block, tmp_payload_buf, 1) != 0) {
         //failed to add payload
         return -1;
     }

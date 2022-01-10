@@ -9,6 +9,7 @@
 struct Block {
     uint32_t prev_hash; /*hash of last block. 0 for gen*/
     uint32_t hash; /*hash of current block. Computed on transactoin data*/
+    uint16_t payload_len; /*length of payload excluding null char*/
     char* payload; /*Block payload */
 };
 
@@ -37,7 +38,7 @@ int unpack_block(int sockfd, struct BlockChain * pblock_chain);
 
 /*Operations on block*/
 void print_block(const struct Block block);
-int add_payload(struct Block* pblock, const char* payload);
+int add_payload(struct Block* pblock, const char* payload, uint8_t length_known);
 void pack_block(const struct Block block, uint8_t** pbuf, size_t* len);
 void hash_block(struct Block* pblock);
 #endif //_BLOCK_H
