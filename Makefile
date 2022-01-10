@@ -1,16 +1,14 @@
 CC = gcc
 CFLAGS = -Wall -Werror -Iinclude/
 
-PROG = cherub_chain
+.PHONY: clean
 
-.PHONY: clean default
+all: node chain add_block
 
-all: cherub_chain chain add_block
-
-cherub_chain: cherub_chain.o block.o server.o endpoints.o requests.o
+node: node.o block.o server.o endpoints.o requests.o
 	mkdir -p bin
-	$(CC) $(CFLAGS) build/cherub_chain.o build/block.o build/server.o \
-		build/endpoints.o build/requests.o -o bin/cherub_chain 
+	$(CC) $(CFLAGS) build/node.o build/block.o build/server.o \
+		build/endpoints.o build/requests.o -o bin/node 
 
 chain: chain.o block.o server.o requests.o
 	mkdir -p bin
@@ -22,9 +20,9 @@ add_block: add_block.o block.o server.o requests.o
 	$(CC) $(CFLAGS) build/add_block.o build/block.o build/server.o\
 		build/requests.o -o bin/add_block
 
-cherub_chain.o: src/cherub_chain.c 
+node.o: src/node.c 
 	mkdir -p build
-	$(CC) $(CFLAGS) -c src/cherub_chain.c -o build/cherub_chain.o
+	$(CC) $(CFLAGS) -c src/node.c -o build/node.o
 
 chain.o: src/chain.c
 	mkdir -p build

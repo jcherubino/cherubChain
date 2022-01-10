@@ -13,13 +13,13 @@
 //Request chain endpoint on node at specified IP
 int main(int argc, char * argv[]) {
      
-    if (argc != 2) {
-        fprintf(stderr, "usage: chain hostname\n");
+    if (argc != 3) {
+        fprintf(stderr, "usage: chain hostname servname\n");
         return 1;
     }
 
     //connect to node with given hostname
-    int node_fd = connect_to_node(argv[1]);
+    int node_fd = connect_to_node(argv[1], argv[2]);
 
     if (node_fd == -1) {
         return 2;
