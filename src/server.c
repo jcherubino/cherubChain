@@ -21,9 +21,6 @@
 
 #define TOTAL_CONNS MAX_CONN_NUMBER + 1 //number of sockfds in polling data (+1 for listener fd)
 
-//TODO: Refactor init and de-init to not dynamically allocate entire server data struct, but 
-//only the variable length array.
-
 //Internal functions
 static int get_listener(const char * servname);
 static void *get_in_addr(struct sockaddr *sa);
@@ -36,14 +33,15 @@ static void *get_in_addr(struct sockaddr *sa);
 struct ServerData initialise_server(const char * servname) {
     struct ServerData server_data;
 
-    //TODO: dynamically allocate instead of wasting space with MAX_CONN_NUMBER?
-    server_data.pollfds = malloc(sizeof(struct pollfd) * TOTAL_CONNS);
+    server_data.pollfds = malloc(sizeof(struct pollfd));
 
     if (server_data.pollfds == NULL) {
         fprintf(stderr, "Server: Failed to malloc memory for pollfds\n");
         return server_data;
     }
 
+    server_data.fd_size = 1;
+    
     // Set up and get a listening socket
     server_data.listenerfd = get_listener(servname);
 
@@ -51,6 +49,7 @@ struct ServerData initialise_server(const char * servname) {
         fprintf(stderr, "Server: error getting listening socket\n");
         free(server_data.pollfds);
         server_data.pollfds = NULL;
+        server_data.fd_size = 0;
         return server_data;
     }
     
@@ -82,34 +81,45 @@ void deinitialise_server(struct ServerData * pserver_data) {
 
 /**
  * Add open socket fd to server.
- * @param server_data server data struct to add sock to
+ * @param pserver_data server data struct to add sock to
  * @param new_fd connected fd to add
  * @return 0 on success or -1 on failure
  */
-int add_fd_to_server(struct ServerData* server_data, int new_fd) {
-    //N.B. +1 to account for listener
-    if (server_data->fd_count == TOTAL_CONNS) {
-        fprintf(stderr, "Server: Max connections in server reached\n");
-        return -1;
+int add_fd_to_server(struct ServerData* pserver_data, int new_fd) {
+    if (pserver_data->fd_count == pserver_data->fd_size) {
+        //double allocated space
+        pserver_data->fd_size *= 2;
+        pserver_data->pollfds = realloc(pserver_data->pollfds, 
+                sizeof(struct pollfd)*pserver_data->fd_count);
+        
+        //realloc error
+        if (pserver_data->pollfds == NULL) {
+            perror("Server: realloc");
+            return -1;
+        }
     }
     
-    server_data->pollfds[server_data->fd_count].fd = new_fd;
-    server_data->pollfds[server_data->fd_count].events = POLLIN; //ready to read
-    server_data->fd_count++; 
+    pserver_data->pollfds[pserver_data->fd_count].fd = new_fd;
+    pserver_data->pollfds[pserver_data->fd_count].events = POLLIN; //ready to read
+    pserver_data->fd_count++; 
 
     return 0;
 }
 
 /**
  * Remove socket from list using index in pollfds array.
- * @param server_data server data struct to remove sock from
+ * @param pserver_data server data struct to remove sock from
  * @return void
  */
-void delete_fd_from_server(struct ServerData* server_data, int fd_index) {
-    //TODO: Validate index is in ocrrect range using fd_count
-    close(server_data->pollfds[fd_index].fd); //close sockfd
+void delete_fd_from_server(struct ServerData* pserver_data, int fd_index) {
+    //Invalid index
+    if (fd_index >= pserver_data->fd_count) {
+        fprintf(stderr, "Server: invalid index requested to delete");
+        return;
+    }
+    close(pserver_data->pollfds[fd_index].fd); //close sockfd
     //Copy end over sockfd to delete with last entry while also updating count
-    server_data->pollfds[fd_index] = server_data->pollfds[--server_data->fd_count];
+    pserver_data->pollfds[fd_index] = pserver_data->pollfds[--pserver_data->fd_count];
 }
 
 /**

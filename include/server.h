@@ -9,6 +9,7 @@
 struct ServerData {
     struct pollfd* pollfds; //array of pollfd objects for poll call
     int fd_count; //How many pollfd objects are being used
+    int fd_size; //Total size of the pollfd array
     int listenerfd; //pointer to listener object so we can tell when to 'accept' new conn
 };
 
